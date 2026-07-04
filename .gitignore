@@ -1,0 +1,10 @@
+# 의존성 (npm install 로 다시 생성됨 — iCloud 동기화 부담 방지)
+node_modules
+dist
+dist-ssr
+*.tsbuildinfo
+*.local
+
+# 에디터
+.vscode/*
+.DS_Store
