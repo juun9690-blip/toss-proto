@@ -8,3 +8,4 @@ dist-ssr
 # 에디터
 .vscode/*
 .DS_Store
+.vercel
