@@ -1,8 +1,10 @@
 import type { CalEvent, Day, Slot } from '../types'
+import type { HighlightInfo } from './WeekGrid'
 
 interface Props {
   events: CalEvent[]
   highlight?: Slot | null
+  highlightInfo?: HighlightInfo | null
   onPickDay: (d: Day) => void
 }
 
@@ -13,7 +15,7 @@ const DAYS_IN_MONTH = 31
 const DATE_TO_DAY: Record<number, Day> = { 6: '월', 7: '화', 8: '수', 9: '목', 10: '금' }
 const DAY_TO_DATE: Record<string, number> = { 월: 6, 화: 7, 수: 8, 목: 9, 금: 10 }
 
-export default function MonthView({ events, highlight, onPickDay }: Props) {
+export default function MonthView({ events, highlight, highlightInfo, onPickDay }: Props) {
   const cells: (number | null)[] = []
   for (let i = 0; i < FIRST_COL; i++) cells.push(null)
   for (let d = 1; d <= DAYS_IN_MONTH; d++) cells.push(d)
@@ -42,7 +44,7 @@ export default function MonthView({ events, highlight, onPickDay }: Props) {
           return (
             <div key={i} className={cls} onClick={() => inWeek && onPickDay(DATE_TO_DAY[d])} style={{ cursor: inWeek ? 'pointer' : 'default' }}>
               <span className="mdate">{d}</span>
-              {isHi && <span className="mev meeting">회의</span>}
+              {isHi && <span className="mev meeting">{highlightInfo?.title ?? '회의'}</span>}
               {titles.map((t, j) => <span key={j} className="mev">{t}</span>)}
             </div>
           )

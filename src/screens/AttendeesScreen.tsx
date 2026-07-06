@@ -1,46 +1,70 @@
+import { useEffect, useRef } from 'react'
 import type { Dispatch, State } from '../App'
 import { effectiveImportance } from '../App'
-import { SOFT_PREF_LABEL } from '../data/mock'
+import { TEAM_TITLES } from '../data/mock'
 import { LEVELS } from '../types'
 
 export default function AttendeesScreen({ state, dispatch }: { state: State; dispatch: Dispatch }) {
   const { attendees } = state
   const imp = effectiveImportance(state)
-  const requiredCount = attendees.filter((a) => a.role !== 'optional').length
+  const selectedRequiredCount = attendees.filter((a) => a.role === 'required').length
+  const selectedAttendeeCount = attendees.filter((a) => a.role !== 'optional').length
+  // 인원수가 바뀌면 숫자가 위/아래로 굴러 들어오게 — 방향(늘었나 줄었나) 추적
+  const prevCount = useRef(selectedAttendeeCount)
+  const countDir = selectedAttendeeCount >= prevCount.current ? 'up' : 'down'
+  useEffect(() => {
+    prevCount.current = selectedAttendeeCount
+  }, [selectedAttendeeCount])
 
   return (
     <div className="flow-screen">
       <div className="flow-content stack create-form">
         <div className="create-intro">
-          <h1>누가 모이나요?</h1>
+          <h1 className="attendees-title">
+            {selectedRequiredCount > 0 ? (
+              <>
+                <span><span className={`count-roll ${countDir}`} key={selectedAttendeeCount}>{selectedAttendeeCount}</span>명</span>이 꼭 참석하는 회의
+              </>
+            ) : '누가 모이나요?'}
+          </h1>
         </div>
 
         {/* 우리 팀 — 필참/선택 선택 */}
-        <section className="form-section">
-          <div className="team-head" style={{ marginBottom: 2 }}>
-            <div className="team-kicker">이번 회의에 필요한 사람</div>
-            <span className="team-count">꼭 참석 {requiredCount}명</span>
-          </div>
-          {attendees.map((a) => (
-            <div key={a.id} className="profile-row compact">
-              <div className="avatar">{avatarText(a.name)}</div>
-              <div className="profile-copy">
-                <div className="profile-name">
-                  <span>{a.name}</span>
+        <section className="form-section attendee-list">
+          {attendees.map((a) => {
+            const row = (
+              <>
+                <div className="avatar">{avatarText(a.name)}</div>
+                <div className="profile-copy">
+                  <div className="profile-name">
+                    <span>{a.name}</span>
+                  </div>
+                  <div className="profile-meta">{TEAM_TITLES[a.id] ?? '팀 메이트'}</div>
                 </div>
-                <div className="profile-meta">{SOFT_PREF_LABEL[a.id] ?? '회피 조건 없음'}</div>
+                <div className="profile-action">
+                  <span className={`role-pill ${a.role === 'host' ? 'host' : a.role === 'required' ? 'required' : ''}`}>
+                    {a.role === 'host' ? '주최자' : a.role === 'required' ? '꼭 참석' : '선택 참석'}
+                  </span>
+                </div>
+              </>
+            )
+
+            return a.role === 'host' ? (
+              <div key={a.id} className="profile-row compact attendee-select-row host-row">
+                {row}
               </div>
-              <div className="profile-action">
-                {a.role === 'host' ? (
-                  <span className="role-pill host">주최자</span>
-                ) : (
-                  <button className={`role-pill ${a.role === 'required' ? 'required' : ''}`} onClick={() => dispatch({ type: 'TOGGLE_ROLE', id: a.id })}>
-                    {a.role === 'required' ? '꼭 참석' : '선택 참석'}
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
+            ) : (
+              <button
+                key={a.id}
+                type="button"
+                className={`profile-row compact attendee-select-row ${a.role === 'required' ? 'selected' : ''}`}
+                aria-pressed={a.role === 'required'}
+                onClick={() => dispatch({ type: 'TOGGLE_ROLE', id: a.id })}
+              >
+                {row}
+              </button>
+            )
+          })}
         </section>
 
         {/* 중요도 — 필참 인원수에 반응 + 직접 설정 */}
@@ -61,7 +85,7 @@ export default function AttendeesScreen({ state, dispatch }: { state: State; dis
 
       <div className="flow-cta action-row">
         <button className="ghost btn-lg" onClick={() => dispatch({ type: 'GOTO', screen: 'CREATE' })}>뒤로</button>
-        <button className="primary btn-lg" onClick={() => dispatch({ type: 'COMPUTE' })}>가능한 시간 보기</button>
+        <button className="primary btn-lg" disabled={selectedRequiredCount === 0} onClick={() => dispatch({ type: 'COMPUTE' })}>가능한 시간 보기</button>
       </div>
     </div>
   )

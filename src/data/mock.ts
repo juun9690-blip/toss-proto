@@ -7,6 +7,15 @@ import type { Attendee, CalEvent, Room } from '../types'
 
 export const TEAM_NAME = '우리 팀'
 
+export const TEAM_TITLES: Record<string, string> = {
+  me: '프로덕트 매니저',
+  sw: '데이터 분석가',
+  dh: '사업 운영 매니저',
+  mj: '재무 운영 매니저',
+  hn: 'UX 리서처',
+  ji: 'QA 매니저',
+}
+
 // 회의실 — 정원(capacity) + 다른 팀 예약(bookings).
 // 골든 설계:
 //  · 화 14시(사람 히어로): 회의실 B 예약 → 빈 방(미팅룸 C)이 있어 방 교체로 해결 (협의 불필요)

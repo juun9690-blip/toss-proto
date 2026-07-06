@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { proposalKey, type Dispatch, type State } from '../App'
 import type { Candidate, Day, Proposal, Slot } from '../types'
 import { DAYS, HOURS } from '../types'
@@ -18,12 +18,41 @@ type RoomFilter = typeof ROOM_FILTERS[number]
 const MEMBER_TABS = ['blocked', 'available', 'all'] as const
 type MemberTab = typeof MEMBER_TABS[number]
 
+// 계산 연출은 세션당 최초 진입 1회만 풀 시퀀스(스켈레톤)로. 이후엔 스태거 등장만.
+// (모듈 레벨 플래그 — 화면 왕복 시 리마운트돼도 유지, 페이지 새로고침 때만 초기화)
+let calcPlayedOnce = false
+
 export default function CandidatesScreen({ state, dispatch, candidates, proposals }: Props) {
   const { attendees, events, draft } = state
   const slot = state.selectedSlot ?? { day: '화' as Day, hour: 15 }
   const [memberTab, setMemberTab] = useState<MemberTab>('blocked')
   const [roomFilter, setRoomFilter] = useState<RoomFilter>('추천')
   const [altOpen, setAltOpen] = useState(!state.slotPicked) // 지정 진입이면 접힘, 바로 진입이면 펼침
+
+  // ── 계산되는 느낌 (labor illusion) ──
+  // 최초 진입이고 대안 섹션이 펼쳐져 있을 때만 스켈레톤 시퀀스를 재생한다.
+  const [calc, setCalc] = useState<'computing' | 'ready'>(() =>
+    !calcPlayedOnce && altOpen ? 'computing' : 'ready',
+  )
+  const [calcStep, setCalcStep] = useState(0) // 0: 팀 확인, 1: 회의실 대조
+  const initialSlotKey = useRef(`${slot.day}-${slot.hour}`).current
+  useEffect(() => {
+    if (calc !== 'computing') return
+    calcPlayedOnce = true
+    const t1 = window.setTimeout(() => setCalcStep(1), 380)
+    const t2 = window.setTimeout(() => setCalc('ready'), 720)
+    return () => {
+      window.clearTimeout(t1)
+      window.clearTimeout(t2)
+    }
+    // 최초 마운트 1회만 실행
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  // 계산 중 사용자가 다른 슬롯을 고르면 시퀀스를 즉시 종료하고 결과를 보여준다.
+  useEffect(() => {
+    if (calc === 'computing' && `${slot.day}-${slot.hour}` !== initialSlotKey) setCalc('ready')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slot.day, slot.hour])
 
   const pick = (next: Partial<Slot>) =>
     dispatch({ type: 'SELECT_SLOT', slot: { day: next.day ?? slot.day, hour: next.hour ?? slot.hour } })
@@ -135,6 +164,47 @@ export default function CandidatesScreen({ state, dispatch, candidates, proposal
     dispatch({ type: 'CONFIRM_REQUIRED_ONLY', slot, excludedId: optionalIds[0] ?? null })
   }
 
+  // 하단 고정 확정: 전원 준비 + 회의실 준비됐을 때만 활성 (요청은 이제 패널 풋터가 담당)
+  const canConfirm = requiredReady && roomReady
+  const confirmHint = !requiredReady
+    ? '안 되는 분의 캘린더를 눌러 조정을 요청해보세요'
+    : !roomReady
+      ? '예약된 회의실을 눌러 사용 요청을 보내보세요'
+      : ''
+
+  // 대안 시간 리스트 — 계산 중이면 상태텍스트+스켈레톤, 완료면 결과가 스태거로 등장
+  const renderAltList = (slots: Slot[]) => {
+    if (calc === 'computing') {
+      return (
+        <div className="alt-slots">
+          <div className="alt-status" key={calcStep}>
+            {calcStep === 0
+              ? `우리 팀 ${attendees.length}명의 일정을 확인하는 중…`
+              : `회의실 ${state.rooms.length}곳과 대조하는 중…`}
+          </div>
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="alt-skeleton" style={{ animationDelay: `${i * 120}ms` }} />
+          ))}
+        </div>
+      )
+    }
+    return (
+      <div className="alt-slots">
+        {slots.map((s, i) => (
+          <button
+            key={slotText(s)}
+            className="alt-slot-button"
+            style={{ ['--d']: `${i * 60}ms` } as CSSProperties}
+            onClick={() => dispatch({ type: 'SELECT_SLOT', slot: s })}
+          >
+            <span>{recMain(s)}</span>
+            <em>{recLabel(s)}</em>
+          </button>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div className="flow-screen">
       <div className="flow-content stack">
@@ -148,15 +218,7 @@ export default function CandidatesScreen({ state, dispatch, candidates, proposal
               <span>가능한 가장 빠른 일정으로 볼까요?</span>
               <span className={`alt-toggle-arrow ${altOpen ? 'open' : ''}`} aria-hidden="true" />
             </button>
-            {altOpen && (
-              <div className="alt-slots">
-                {altSuggestions.map((s) => (
-                  <button key={slotText(s)} className="alt-slot-button" onClick={() => dispatch({ type: 'SELECT_SLOT', slot: s })}>
-                    <span>{recMain(s)}</span><em>{recLabel(s)}</em>
-                  </button>
-                ))}
-              </div>
-            )}
+            {altOpen && renderAltList(altSuggestions)}
           </section>
         )}
 
@@ -167,15 +229,7 @@ export default function CandidatesScreen({ state, dispatch, candidates, proposal
               <span>가능한 가장 빠른 일정으로 볼까요?</span>
               <span className={`alt-toggle-arrow ${altOpen ? 'open' : ''}`} aria-hidden="true" />
             </button>
-            {altOpen && (
-              <div className="alt-slots">
-                {recommendedTimes.map((s) => (
-                  <button key={slotText(s)} className="alt-slot-button" onClick={() => dispatch({ type: 'SELECT_SLOT', slot: s })}>
-                    <span>{recMain(s)}</span><em>{recLabel(s)}</em>
-                  </button>
-                ))}
-              </div>
-            )}
+            {altOpen && renderAltList(recommendedTimes)}
           </section>
         )}
 
@@ -217,7 +271,7 @@ export default function CandidatesScreen({ state, dispatch, candidates, proposal
           {shownMembers.length === 0 ? (
             <div className="all-clear">{memberTab === 'blocked' ? '이 시간엔 우리 팀 모두 가능해요' : '표시할 팀원이 없어요'}</div>
           ) : (
-            <div className="avail">
+            <div className="avail" key={memberTab}>
               {shownMembers.map((a) => {
                 const approved = !a.ok && peopleFixAccepted && rawPeopleFix?.whoId === a.att.id
                 return (
@@ -317,52 +371,27 @@ export default function CandidatesScreen({ state, dispatch, candidates, proposal
           {!capOkRoomExists && <p className="section-hint">이 시간엔 정원이 맞는 회의실이 없어요.</p>}
         </section>
 
-        {/* 종합 — 하나의 결정 존 */}
-        <div className="decision-zone">
-          {state.approvalNotes.length > 0 && (
-            <div className="approval-stack">
-              {state.approvalNotes.map((note, index) => (
-                <div className="approval-line" key={`${note}-${index}`}>
-                  <span>✓</span>
-                  <p>{note}</p>
-                </div>
-              ))}
-            </div>
-          )}
-          {hasDecisionAction ? (
-            <div className="decision-actions">
-              {personDecision && (
-                <button className="decision-action" onClick={goFix}>
-                  <span>
-                    <b>{personCtaTitle(personDecision, state)}</b>
-                    <small>{personCtaMeta(personDecision, state)}</small>
-                  </span>
-                  <em>참석자</em>
-                </button>
-              )}
-              {roomDecision && (
-                <button className="decision-action" onClick={goRoomDecision}>
-                  <span>
-                    <b>{roomDecision.whoId}에 회의실 사용 요청</b>
-                    <small>{roomDecision.roomName} · {slotText(roomDecision.slot)}</small>
-                  </span>
-                  <em>회의실</em>
-                </button>
-              )}
-            </div>
-          ) : blocked ? null : roomReady ? (
-            <button className="primary btn-lg btn-block" onClick={goConfirm}>
-              이 시간으로 확정 · {roomNeedsSwap ? recRoom!.name : draft.location}
-            </button>
-          ) : (
-            <div className={`empty ${roomRequestDeclined ? 'danger' : ''}`}>
-              {roomRequestDeclined
-                ? '이미 상대방이 일정 조정을 하기 어려운 시간이에요. 다른 시간을 선택해보세요.'
-                : '빈 회의실이 없어요. 위에서 예약된 회의실을 눌러 시간표를 보고, 그 팀에 조정을 요청해보세요.'}
-            </div>
-          )}
+        {/* 승인 내역만 스크롤 콘텐츠에 잔류 (요청 버튼은 패널 풋터로 이관) */}
+        {state.approvalNotes.length > 0 && (
+          <div className="approval-stack decision-zone">
+            {state.approvalNotes.map((note, index) => (
+              <div className="approval-line" key={`${note}-${index}`}>
+                <span>✓</span>
+                <p>{note}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
-          <button className="ghost btn-block inline-flow-action" onClick={() => dispatch({ type: 'GOTO', screen: 'ATTENDEES' })}>← 참석자 다시 보기</button>
+      {/* 하단 고정 존 — 요청은 패널이, 확정·뒤로는 여기서 (UT §2·§3, 모든 화면 같은 좌표) */}
+      <div className="flow-cta">
+        {!canConfirm && confirmHint && <p className="cta-hint">{confirmHint}</p>}
+        <div className="action-row">
+          <button className="ghost btn-lg" onClick={() => dispatch({ type: 'GOTO', screen: 'ATTENDEES' })}>← 뒤로</button>
+          <button className="primary btn-lg" disabled={!canConfirm} onClick={goConfirm}>
+            {canConfirm ? `이 시간으로 확정 · ${roomNeedsSwap ? recRoom!.name : draft.location}` : '이 시간으로 확정'}
+          </button>
         </div>
       </div>
     </div>

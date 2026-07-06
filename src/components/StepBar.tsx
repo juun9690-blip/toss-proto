@@ -16,7 +16,8 @@ export default function StepBar({ screen }: { screen: Screen }) {
     <div className="steps">
       {STEPS.map((s, i) => {
         const cls = i === curIdx ? 'active' : i < curIdx ? 'done' : ''
-        return <span key={s.key} className={`step ${cls}`}>{s.label}</span>
+        // 활성(파란) 단계로 바뀔 때 key가 달라져 리마운트 → pop/glow 애니메이션이 재생된다.
+        return <span key={s.key + (i === curIdx ? '-on' : '')} className={`step ${cls}`}>{s.label}</span>
       })}
     </div>
   )

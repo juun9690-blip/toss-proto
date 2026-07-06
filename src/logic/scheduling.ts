@@ -114,6 +114,31 @@ function findMoveTarget(att: Attendee, from: Slot, events: CalEvent[]): Slot | n
   return anyFree[0] ?? null
 }
 
+/**
+ * 수신자가 '자기 일정'을 옮길 수 있는 빈 시간 후보 전체.
+ * findMoveTarget이 한 곳만 자동 제안한다면, 이건 수신자가 직접 고를 수 있게 모든 가능 슬롯을 준다.
+ * (같은 요일·시간순 우선 정렬 → 재계산 비용을 시스템이 대신 계산해 보여주는 용도)
+ */
+export function moveTargets(event: CalEvent, events: CalEvent[], meetingSlot: Slot): Slot[] {
+  const span = Math.max(1, event.endHour - event.startHour)
+  const hourSet = new Set(HOURS)
+  const mine = events.filter((e) => e.id !== event.id && e.ownerId === event.ownerId)
+  const from: Slot = { day: event.day, hour: event.startHour }
+  const fits = (start: Slot): boolean => {
+    // 원래 자리와 겹치는 이동은 의미 없음(제자리 이동) → 제외
+    if (start.day === from.day && start.hour < event.endHour && start.hour + span > event.startHour) return false
+    for (let h = start.hour; h < start.hour + span; h++) {
+      if (!hourSet.has(h)) return false // 점심(12)·범위 밖
+      if (mine.some((e) => e.day === start.day && h >= e.startHour && h < e.endHour)) return false // 내 다른 일정과 충돌
+      if (start.day === meetingSlot.day && h === meetingSlot.hour) return false // 회의 시간과 겹침
+    }
+    return true
+  }
+  return allSlots()
+    .filter((s) => !sameSlot(s, from) && fits(s))
+    .sort((a, b) => (a.day === from.day ? 0 : 1) - (b.day === from.day ? 0 : 1) || slotEarlier(a, b))
+}
+
 const FRICTION: Record<ProposalAction, { score: number; label: string }> = {
   moveFlex: { score: 1, label: '낮음' },
   concedeSoft: { score: 2, label: '중간' },

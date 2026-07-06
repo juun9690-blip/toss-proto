@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer } from 'react'
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import type { Attendee, CalEvent, Level, MeetingDraft, Proposal, Role, Room, Screen, Slot } from './types'
 import { ATTENDEES, EVENTS, DEFAULT_DRAFT, ROOMS } from './data/mock'
 import {
@@ -12,9 +12,12 @@ import {
   teamAvailability,
   availableRooms,
   recommendRoom,
+  moveTargets,
+  sameSlot,
+  roomProposalFor,
 } from './logic/scheduling'
 import StepBar from './components/StepBar'
-import CalendarPane, { type SplitData, type SidePane } from './components/CalendarPane'
+import CalendarPane, { type SplitData, type SidePane, type PaneActionType, type PaneFooter } from './components/CalendarPane'
 import type { Ghost, MarkMode } from './components/WeekGrid'
 import SetupScreen from './screens/SetupScreen'
 import CreateScreen from './screens/CreateScreen'
@@ -24,8 +27,32 @@ import RevealScreen from './screens/RevealScreen'
 import RequestingScreen from './screens/RequestingScreen'
 import RespondScreen from './screens/RespondScreen'
 import ConfirmScreen from './screens/ConfirmScreen'
+import type { HighlightInfo } from './components/WeekGrid'
 
 const MY_ID = 'me'
+
+// 화면 진행 순서 — 전환 방향(앞/뒤) 판별용
+const SCREEN_ORDER: Screen[] = ['SETUP', 'CREATE', 'ATTENDEES', 'CANDIDATES', 'REVEAL', 'REQUESTING', 'RESPOND', 'CONFIRM']
+
+function usePrevious<T>(value: T): T | undefined {
+  const ref = useRef<T>()
+  useEffect(() => {
+    ref.current = value
+  }, [value])
+  return ref.current
+}
+
+// REQUESTING → RESPOND 역할 전환 배너에 쓸 수신자 이름
+function receiverLabel(state: State): string {
+  const p = state.selected
+  if (!p) return '상대'
+  if (p.action === 'moveRoomBooking') return p.whoId // 예약한 팀 이름
+  return state.attendees.find((a) => a.id === p.whoId)?.name ?? '상대'
+}
+
+const INITIAL_ATTENDEES = ATTENDEES.map((a) =>
+  a.role === 'host' ? a : { ...a, role: 'optional' as const },
+)
 
 export interface State {
   screen: Screen
@@ -47,12 +74,13 @@ export interface State {
   slotPicked: boolean // 사용자가 직접 시간을 골랐는지 (false면 '바로 회의 잡기'로 진입)
   conflictFocusId: string | null
   roomFocusName: string | null
+  receiverMoveTo: Slot | null // moveFlex 응답: 수신자가 자기 일정을 옮길 목적지
 }
 
 const initial: State = {
   screen: 'SETUP',
   draft: DEFAULT_DRAFT,
-  attendees: ATTENDEES,
+  attendees: INITIAL_ATTENDEES,
   events: EVENTS,
   rooms: ROOMS,
   proposals: [],
@@ -69,6 +97,7 @@ const initial: State = {
   slotPicked: false,
   conflictFocusId: null,
   roomFocusName: null,
+  receiverMoveTo: null,
 }
 
 type Action =
@@ -77,6 +106,7 @@ type Action =
   | { type: 'TOGGLE_ROLE'; id: string }
   | { type: 'SET_IMPORTANCE'; level: Level | null }
   | { type: 'SELECT_SLOT'; slot: Slot }
+  | { type: 'PICK_MOVE_DEST'; slot: Slot }
   | { type: 'PREVIEW_CONFLICT'; attendeeId: string }
   | { type: 'PREVIEW_ROOM'; roomName: string }
   | { type: 'COMPUTE' }
@@ -158,6 +188,8 @@ function reducer(state: State, action: Action): State {
       return { ...state, importanceOverride: action.level }
     case 'SELECT_SLOT':
       return { ...state, selectedSlot: action.slot, slotPicked: true, conflictFocusId: null, roomFocusName: null }
+    case 'PICK_MOVE_DEST':
+      return { ...state, receiverMoveTo: action.slot }
     case 'PREVIEW_CONFLICT':
       return { ...state, conflictFocusId: state.conflictFocusId === action.attendeeId ? null : action.attendeeId }
     case 'PREVIEW_ROOM':
@@ -169,10 +201,15 @@ function reducer(state: State, action: Action): State {
       const selectedSlot = state.selectedSlot ?? proposals[0]?.slot ?? { day: '화' as const, hour: 15 }
       return { ...state, proposals, selectedSlot, slotPicked: !blind, screen: 'CANDIDATES' }
     }
-    case 'CONFIRM_REQUIRED_ONLY':
-      return { ...state, confirmedSlot: action.slot, excludedId: action.excludedId, movedNote: null, screen: 'CONFIRM' }
+    case 'CONFIRM_REQUIRED_ONLY': {
+      // 패널에서 바로 확정해도 유효한 회의실이 잡히도록 위치를 해석한다.
+      const location = resolvedLocation(state, action.slot, state.rooms, state.draft.location, action.excludedId)
+      return { ...state, draft: { ...state.draft, location }, confirmedSlot: action.slot, excludedId: action.excludedId, movedNote: null, screen: 'CONFIRM' }
+    }
     case 'SELECT_PROPOSAL':
-      return { ...state, selected: action.proposal, requestMessage: defaultRequestMessage(state, action.proposal), screen: 'REVEAL' }
+      // receiverMoveTo는 '수신자가 직접 고른' 목적지만 담는다(초기엔 null → 캘린더에 주황 '옮겨야 할' 상태).
+      // 추천/CTA는 RespondScreen·ACCEPT에서 `?? p.moveTo`로 폴백하므로 기본값 없이도 동작한다.
+      return { ...state, selected: action.proposal, requestMessage: defaultRequestMessage(state, action.proposal), receiverMoveTo: null, screen: 'REVEAL' }
     case 'SET_REQUEST_MESSAGE':
       return { ...state, requestMessage: action.message }
     case 'SEND_REQUEST':
@@ -188,10 +225,11 @@ function reducer(state: State, action: Action): State {
       if (p.action === 'moveFlex' && p.movedEventId && p.moveTo) {
         const moved = state.events.find((e) => e.id === p.movedEventId)!
         const span = moved.endHour - moved.startHour
+        const dest = state.receiverMoveTo ?? p.moveTo
         events = state.events.map((e) =>
-          e.id === p.movedEventId ? { ...e, day: p.moveTo!.day, startHour: p.moveTo!.hour, endHour: p.moveTo!.hour + span } : e,
+          e.id === p.movedEventId ? { ...e, day: dest.day, startHour: dest.hour, endHour: dest.hour + span } : e,
         )
-        movedNote = `'${moved.title}' 일정이 ${p.moveTo.day} ${p.moveTo.hour}:00로 이동되었습니다. (다른 충돌 없음)`
+        movedNote = `'${moved.title}' 일정을 ${dest.day} ${dest.hour}:00로 옮기고 회의를 확정했어요.`
       } else if (p.action === 'concedeSoft') {
         movedNote = `${attendeeName(state, p.whoId)} 님이 이번 회의 참석 요청을 수락했습니다.`
       } else if (p.action === 'dropOptional') {
@@ -276,12 +314,33 @@ function defaultRequestMessage(state: State, p: Proposal): string {
 
 export default function App() {
   const [state, dispatch] = useReducer(reducer, initial)
+  const prevScreen = usePrevious(state.screen)
+  // 진행 순서상 뒤로 가면 back, 아니면 fwd (초기 진입도 fwd)
+  const dir =
+    prevScreen && SCREEN_ORDER.indexOf(state.screen) < SCREEN_ORDER.indexOf(prevScreen) ? 'back' : 'fwd'
+  const [handoffText, setHandoffText] = useState<string | null>(null)
 
+  // REQUESTING: 전송 시퀀스 뒤 역할이 뒤집힌다 → 1300ms에 RESPOND로 전환하고,
+  // 900ms에 "지금부터 상대에게 보이는 화면" 배너를 띄운다.
   useEffect(() => {
     if (state.screen !== 'REQUESTING') return
-    const timer = window.setTimeout(() => dispatch({ type: 'GOTO', screen: 'RESPOND' }), 900)
-    return () => window.clearTimeout(timer)
+    const isRoom = state.selected?.action === 'moveRoomBooking'
+    const text = `지금부터 ${receiverLabel(state)}${isRoom ? '에' : ' 님에게'} 보이는 화면이에요`
+    const toRespond = window.setTimeout(() => dispatch({ type: 'GOTO', screen: 'RESPOND' }), 1300)
+    const showBanner = window.setTimeout(() => setHandoffText(text), 900)
+    return () => {
+      window.clearTimeout(toRespond)
+      window.clearTimeout(showBanner)
+    }
   }, [state.screen])
+
+  // 배너는 뜬 뒤 스스로 사라진다. (화면 전환이 REQUESTING effect의 cleanup을 부르므로,
+  //  hide 타이머를 그쪽에 두면 전환 순간 취소돼 배너가 남는다 → 별도 effect로 분리)
+  useEffect(() => {
+    if (!handoffText) return
+    const hide = window.setTimeout(() => setHandoffText(null), 2600)
+    return () => window.clearTimeout(hide)
+  }, [handoffText])
 
   const candidates = useMemo(() => rankCandidates(state.attendees, state.events), [state.attendees, state.events])
   const liveProposals = state.proposals.filter((p) => !isDeclined(state, p))
@@ -295,32 +354,54 @@ export default function App() {
       </header>
       <div className="layout">
         <aside className="sidebar">
-          {state.screen === 'SETUP' && <SetupScreen state={state} dispatch={dispatch} />}
-          {state.screen === 'CREATE' && <CreateScreen state={state} dispatch={dispatch} />}
-          {state.screen === 'ATTENDEES' && <AttendeesScreen state={state} dispatch={dispatch} />}
-          {state.screen === 'CANDIDATES' && (
-            <CandidatesScreen state={state} dispatch={dispatch} candidates={candidates} proposals={liveProposals} />
-          )}
-          {state.screen === 'REVEAL' && <RevealScreen state={state} dispatch={dispatch} />}
-          {state.screen === 'REQUESTING' && <RequestingScreen state={state} />}
-          {state.screen === 'RESPOND' && <RespondScreen state={state} dispatch={dispatch} />}
-          {state.screen === 'CONFIRM' && <ConfirmScreen state={state} dispatch={dispatch} />}
+          {/* key 변경 → 리마운트 → CSS 입장 애니메이션 자동 재생 (fwd/back 방향) */}
+          <div key={state.screen} className={`screen-enter ${dir}`}>
+            {state.screen === 'SETUP' && <SetupScreen state={state} dispatch={dispatch} />}
+            {state.screen === 'CREATE' && <CreateScreen state={state} dispatch={dispatch} />}
+            {state.screen === 'ATTENDEES' && <AttendeesScreen state={state} dispatch={dispatch} />}
+            {state.screen === 'CANDIDATES' && (
+              <CandidatesScreen state={state} dispatch={dispatch} candidates={candidates} proposals={liveProposals} />
+            )}
+            {state.screen === 'REVEAL' && <RevealScreen state={state} dispatch={dispatch} />}
+            {state.screen === 'REQUESTING' && <RequestingScreen state={state} />}
+            {state.screen === 'RESPOND' && <RespondScreen state={state} dispatch={dispatch} />}
+            {state.screen === 'CONFIRM' && <ConfirmScreen state={state} dispatch={dispatch} />}
+          </div>
         </aside>
         <main className="calendar-pane">
           <CalendarPane
             attendees={state.attendees}
             events={cal.events}
             highlight={cal.highlight}
+            highlightInfo={cal.highlightInfo}
             markEventId={cal.markEventId}
             markMode={cal.markMode}
             ghost={cal.ghost}
             split={cal.split}
             title={cal.title}
             rangeText={cal.rangeText}
-            onPickSlot={state.screen === 'CANDIDATES' || state.screen === 'SETUP' || state.screen === 'CREATE' || state.screen === 'ATTENDEES' ? (slot) => dispatch({ type: 'SELECT_SLOT', slot }) : undefined}
+            candidates={cal.candidates}
+            onPickSlot={
+              state.screen === 'RESPOND' && state.selected?.action === 'moveFlex'
+                ? (slot) => dispatch({ type: 'PICK_MOVE_DEST', slot })
+                : state.screen === 'CANDIDATES' || state.screen === 'SETUP' || state.screen === 'CREATE' || state.screen === 'ATTENDEES'
+                  ? (slot) => dispatch({ type: 'SELECT_SLOT', slot })
+                  : undefined
+            }
+            onPaneAction={(a: PaneActionType) => {
+              // 패널=버튼: 보고 있는 상대에게 바로 요청/확정 (UT §2)
+              if (a.kind === 'proposal') dispatch({ type: 'SELECT_PROPOSAL', proposal: a.proposal })
+              else dispatch({ type: 'CONFIRM_REQUIRED_ONLY', slot: a.slot, excludedId: a.excludedId })
+            }}
           />
         </main>
       </div>
+      {handoffText && (
+        <div className="handoff-banner" role="status">
+          <span className="handoff-banner-dot" aria-hidden="true" />
+          {handoffText}
+        </div>
+      )}
     </div>
   )
 }
@@ -328,9 +409,11 @@ export default function App() {
 interface CalView {
   events: CalEvent[]
   highlight: Slot | null
+  highlightInfo?: HighlightInfo | null
   markEventId: string | null
   markMode?: MarkMode
   ghost?: Ghost | null
+  candidates?: Slot[]
   split?: SplitData | null
   title?: string
   rangeText?: string
@@ -338,7 +421,8 @@ interface CalView {
 
 function mainCalendarView(state: State): CalView {
   const myEvents = state.events.filter((e) => e.ownerId === MY_ID)
-  const base: CalView = { events: myEvents, highlight: null, markEventId: null }
+  const highlightInfo = meetingHighlightInfo(state)
+  const base: CalView = { events: myEvents, highlight: null, highlightInfo, markEventId: null }
 
   switch (state.screen) {
     case 'SETUP':
@@ -360,24 +444,32 @@ function mainCalendarView(state: State): CalView {
     case 'REQUESTING': {
       const p = state.selected
       if (!p) return base
-      return buildRespondCalendar(state, p)
+      return { ...buildRespondCalendar(state, p), highlightInfo }
     }
     case 'RESPOND': {
       const p = state.selected
       if (!p) return base
-      return buildRespondCalendar(state, p)
+      return { ...buildRespondCalendar(state, p), highlightInfo }
     }
     case 'CONFIRM': {
       const p = state.selected
       if (p?.action === 'moveFlex' && p.movedEventId) {
         const ev = state.events.find((e) => e.id === p.movedEventId)
-        return { events: ev ? [...myEvents, ev] : myEvents, highlight: state.confirmedSlot, markEventId: ev?.id ?? null, markMode: 'moved' }
+        return { events: ev ? [...myEvents, ev] : myEvents, highlight: state.confirmedSlot, highlightInfo, markEventId: ev?.id ?? null, markMode: 'moved' }
       }
       return { ...base, highlight: state.confirmedSlot }
     }
     default:
       return base
   }
+}
+
+function meetingHighlightInfo(state: State): HighlightInfo | null {
+  const title = state.draft.title.trim()
+  const selectedRequired = state.attendees.some((a) => a.role === 'required')
+  const meta = selectedRequired ? `${requiredCount(state.attendees)}명 꼭 참여` : undefined
+  if (!title && !meta) return null
+  return { title: title || '회의', meta }
 }
 
 function buildRespondCalendar(state: State, p: Proposal): CalView {
@@ -404,13 +496,18 @@ function buildRespondCalendar(state: State, p: Proposal): CalView {
 
   if (p.action === 'moveFlex' && p.movedEventId) {
     const ev = state.events.find((e) => e.id === p.movedEventId)
-    const span = ev ? ev.endHour - ev.startHour : 1
-    return {
-      ...base,
-      markEventId: p.movedEventId,
-      markMode: 'moveAsk',
-      ghost: p.moveTo ? { day: p.moveTo.day, startHour: p.moveTo.hour, endHour: p.moveTo.hour + span, label: '여기로 옮겨져요' } : null,
+    const picked = state.receiverMoveTo // 수신자가 직접 고른 목적지 (없으면 아직 '옮겨야 할' 주황 상태)
+    const targets = ev ? moveTargets(ev, state.events, p.slot) : []
+    const candidates = targets.filter((s) => !(picked && sameSlot(s, picked))).slice(0, 7)
+    if (ev && picked) {
+      // 고른 자리로 겹치던 일정을 옮긴다 → 주황에서 초록('가능')으로 바뀌며 이동,
+      // 비워진 원래 자리엔 파란 회의(highlight)만 남는다.
+      const span = ev.endHour - ev.startHour
+      const movedEv: CalEvent = { ...ev, day: picked.day, startHour: picked.hour, endHour: picked.hour + span }
+      const others = theirReal.filter((e) => e.id !== ev.id)
+      return { ...base, events: [...others, movedEv], markEventId: ev.id, markMode: 'movedOk', candidates }
     }
+    return { ...base, markEventId: p.movedEventId, markMode: 'moveAsk', candidates }
   }
   if (p.action === 'concedeSoft') {
     const softBlock: CalEvent = {
@@ -430,8 +527,13 @@ function buildRespondCalendar(state: State, p: Proposal): CalView {
 }
 
 // 시간 확인 단계의 미리보기: 내 캘린더 + (확인 중인 사람) + (확인 중인 회의실)
+// 각 상대 패널에는 '보고 있는 것에 요청'하는 풋터를 붙인다 (UT §2) — 패널 자체가 버튼.
 function buildCandidatesPreview(state: State, slot: Slot, myEvents: CalEvent[]): SplitData | null {
-  const panes: SidePane[] = [{ title: '내 캘린더', events: myEvents, highlight: slot }]
+  const panes: SidePane[] = [{
+    title: '내 캘린더', events: myEvents, highlight: slot, highlightInfo: meetingHighlightInfo(state),
+    identity: { kind: 'person', avatar: '나' },
+  }]
+  const optionalIds = state.attendees.filter((a) => a.role === 'optional').map((a) => a.id)
 
   const who = state.attendees.find((a) => a.id === state.conflictFocusId)
   if (who) {
@@ -446,7 +548,12 @@ function buildCandidatesPreview(state: State, slot: Slot, myEvents: CalEvent[]):
       title: availabilityLabel(who, slot), kind: 'fixed',
     }
     const events = softConflict ? [...theirReal, softConflict] : theirReal
-    panes.push({ title: `${who.name} 캘린더`, events, highlight: slot, markEventId: conflict?.id ?? softConflict?.id ?? null, markMode: declined ? 'conflict' : 'requestable' })
+    panes.push({
+      title: `${who.name} 캘린더`, events, highlight: slot,
+      markEventId: conflict?.id ?? softConflict?.id ?? null, markMode: declined ? 'conflict' : 'requestable',
+      identity: { kind: 'person', avatar: avatarInitial(who.name) },
+      footer: personFooter(who, currentProposal, declined, slot),
+    })
   }
 
   const room = state.rooms.find((r) => r.name === state.roomFocusName)
@@ -461,11 +568,44 @@ function buildCandidatesPreview(state: State, slot: Slot, myEvents: CalEvent[]):
       highlight: slot,
       markEventId: booking ? roomBookingId(room, slot.day, slot.hour) : null,
       markMode: booking ? (declined ? 'conflict' : 'requestable') : 'requestable',
+      identity: { kind: 'room', badge: roomBadge(room) },
+      footer: roomFooter(room, slot, declined, optionalIds),
     })
   }
 
   if (panes.length === 1) return null
   return { day: slot.day, title: '일정 확인', note: `${slot.day} ${slot.hour}:00 상황을 나란히 확인해요`, panes }
+}
+
+// 사람 이니셜 아바타 / 회의실 문패(층수) 배지
+function avatarInitial(name: string): string {
+  return name === '나' ? '나' : name.slice(0, 1)
+}
+function roomBadge(room: Room): string {
+  const floor = /(\d+)\s*층/.exec(room.meta)?.[1]
+  return floor ? `${floor}F` : '룸'
+}
+
+// UT §2 상태표 — 보고 있는 대상과 액션을 항상 일치시킨다.
+function personFooter(who: Attendee, prop: Proposal | null, declined: boolean, slot: Slot): PaneFooter {
+  if (prop && prop.whoId === who.id) {
+    if (declined) return { label: '이미 조정이 어려운 시간이에요', tone: 'danger' }
+    if (prop.action === 'dropOptional') {
+      return { label: `${who.name} 님은 선택 참석 · 없이 진행하기`, tone: 'active', action: { kind: 'confirmRequiredOnly', slot, excludedId: who.id } }
+    }
+    const verb = prop.action === 'moveFlex' ? '일정 이동 요청' : '참석 가능 여부 확인'
+    return { label: `${who.name} 님에게 ${verb}`, tone: 'active', action: { kind: 'proposal', proposal: prop } }
+  }
+  return { label: '한 번의 조정으론 전원이 안 되는 시간이에요 — 다른 시간을 골라보세요', tone: 'muted' }
+}
+
+function roomFooter(room: Room, slot: Slot, declined: boolean, optionalIds: string[]): PaneFooter {
+  const booking = bookingAt(room, slot)
+  if (!booking) return { label: '이 시간 바로 사용할 수 있어요', tone: 'muted' }
+  if (declined) return { label: '이미 조정이 어려운 시간이에요', tone: 'danger' }
+  const roomProp = roomProposalFor(room, slot, optionalIds)
+  if (roomProp) return { label: `${booking.by}에 회의실 사용 요청`, tone: 'active', action: { kind: 'proposal', proposal: roomProp } }
+  return { label: '이 예약은 옮기기 어려워요 — 다른 회의실을 골라보세요', tone: 'muted' }
 }
 
 function availabilityLabel(att: Attendee, slot: Slot): string {
@@ -478,19 +618,17 @@ function availabilityLabel(att: Attendee, slot: Slot): string {
 function buildSplit(state: State, p: Proposal, myEvents: CalEvent[]): SplitData {
   const who = state.attendees.find((a) => a.id === p.whoId)
   const theirReal = state.events.filter((e) => e.ownerId === p.whoId)
-  const mine: SidePane = { title: '내 캘린더', events: myEvents, highlight: p.slot }
+  const mine: SidePane = { title: '내 캘린더', events: myEvents, highlight: p.slot, highlightInfo: meetingHighlightInfo(state), identity: { kind: 'person', avatar: '나' } }
+  const theirIdent = { kind: 'person' as const, avatar: avatarInitial(who?.name ?? '상대') }
 
   if (p.action === 'moveFlex' && p.movedEventId && p.moveTo) {
-    const ev = state.events.find((e) => e.id === p.movedEventId)
-    const span = ev ? ev.endHour - ev.startHour : 1
     return { day: p.slot.day, panes: [mine, {
-      title: `${who?.name} 캘린더`, events: theirReal, highlight: p.slot, markEventId: p.movedEventId, markMode: 'requestable',
-      ghost: { day: p.moveTo.day, startHour: p.moveTo.hour, endHour: p.moveTo.hour + span, label: '여기로 이동' },
+      title: `${who?.name} 캘린더`, events: theirReal, highlight: p.slot, markEventId: p.movedEventId, markMode: 'requestable', identity: theirIdent,
     }] }
   }
   if (p.action === 'concedeSoft') {
     const softBlock: CalEvent = { id: 'soft-mark', ownerId: p.whoId, day: p.slot.day, startHour: 13, endHour: 14, title: '평소 점심 직후 회피', kind: 'flex' }
-    return { day: p.slot.day, panes: [mine, { title: `${who?.name} 캘린더`, events: [...theirReal, softBlock], highlight: p.slot, markEventId: 'soft-mark', markMode: 'requestable' }] }
+    return { day: p.slot.day, panes: [mine, { title: `${who?.name} 캘린더`, events: [...theirReal, softBlock], highlight: p.slot, markEventId: 'soft-mark', markMode: 'requestable', identity: theirIdent }] }
   }
   if (p.action === 'moveRoomBooking' && p.roomName && p.moveTo) {
     const room = state.rooms.find((r) => r.name === p.roomName)
@@ -501,12 +639,13 @@ function buildSplit(state: State, p: Proposal, myEvents: CalEvent[]): SplitData 
       panes: [mine, {
         title: `${p.roomName} 시간표`, events: room ? roomEvents(room) : [], highlight: p.slot, markEventId: p.movedEventId, markMode: 'requestable',
         ghost: { day: p.moveTo.day, startHour: p.moveTo.hour, endHour: p.moveTo.hour + 1, label: '대안 시간' },
+        identity: { kind: 'room', badge: room ? roomBadge(room) : '룸' },
       }],
     }
   }
   // dropOptional: 그 시간에 겹친 상대 일정을 불참 근거로 표시
   const conflict = theirReal.find((e) => e.day === p.slot.day && p.slot.hour >= e.startHour && p.slot.hour < e.endHour)
-  return { day: p.slot.day, panes: [mine, { title: `${who?.name} 캘린더`, events: theirReal, highlight: p.slot, markEventId: conflict?.id ?? null, markMode: 'requestable' }] }
+  return { day: p.slot.day, panes: [mine, { title: `${who?.name} 캘린더`, events: theirReal, highlight: p.slot, markEventId: conflict?.id ?? null, markMode: 'requestable', identity: theirIdent }] }
 }
 
 export type Dispatch = React.Dispatch<Action>
