@@ -88,7 +88,7 @@ export default function CreateScreen({ state, dispatch }: { state: State; dispat
       </div>
 
       <div className="flow-cta action-row">
-        <button className="ghost btn-lg" onClick={() => dispatch({ type: 'GOTO', screen: 'SETUP' })}>뒤로</button>
+        <button className="ghost btn-lg" onClick={() => dispatch({ type: 'GOTO', screen: 'SETUP' })}>← 뒤로</button>
         <button className={`primary btn-lg ${canNext ? 'cta-ready' : ''}`} disabled={!canNext} onClick={() => dispatch({ type: 'GOTO', screen: 'ATTENDEES' })}>
           참석자 정하기
         </button>

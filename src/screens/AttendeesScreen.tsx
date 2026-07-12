@@ -90,7 +90,7 @@ export default function AttendeesScreen({ state, dispatch }: { state: State; dis
       </div>
 
       <div className="flow-cta action-row">
-        <button className="ghost btn-lg" onClick={() => dispatch({ type: 'GOTO', screen: 'CREATE' })}>뒤로</button>
+        <button className="ghost btn-lg" onClick={() => dispatch({ type: 'GOTO', screen: 'CREATE' })}>← 뒤로</button>
         <button className={`primary btn-lg ${selectedRequiredCount > 0 ? 'cta-ready' : ''}`} disabled={selectedRequiredCount === 0} onClick={() => dispatch({ type: 'COMPUTE' })}>가능한 시간 보기</button>
       </div>
     </div>
