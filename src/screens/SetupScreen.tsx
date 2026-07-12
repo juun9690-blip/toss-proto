@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { Dispatch, State } from '../App'
 import { TEAM_TITLES } from '../data/mock'
+import ProfileAvatar from '../components/ProfileAvatar'
 
 export default function SetupScreen({ state, dispatch }: { state: State; dispatch: Dispatch }) {
   const { attendees } = state
@@ -16,9 +17,7 @@ export default function SetupScreen({ state, dispatch }: { state: State; dispatc
 
   const ctaText = hasPicked
     ? `꼭 참석 ${selectedAttendeeCount}명과 회의 잡기`
-    : state.selectedSlot
-      ? `${state.selectedSlot.day} ${state.selectedSlot.hour}:00에 회의 잡기`
-      : '우리 팀 회의 잡기'
+    : '우리 팀 회의 잡기'
 
   return (
     <div className="flow-screen">
@@ -27,7 +26,7 @@ export default function SetupScreen({ state, dispatch }: { state: State; dispatc
           <div className="setup-team-title">
             {hasPicked ? (
               <>
-                <span className={`count-roll ${countDir}`} key={selectedAttendeeCount}>{selectedAttendeeCount}</span>명이 꼭 참석해요
+                <span className={`count-roll ${countDir}`} key={selectedAttendeeCount}>{selectedAttendeeCount}</span>명이 참여하는 회의를 만들까요?
               </>
             ) : '우리 팀이에요'}
           </div>
@@ -41,7 +40,7 @@ export default function SetupScreen({ state, dispatch }: { state: State; dispatc
           {attendees.map((a) => {
             const row = (
               <>
-                <div className="avatar">{avatarText(a.name)}</div>
+                <ProfileAvatar id={a.id} />
                 <div className="profile-copy">
                   <div className="profile-name">
                     <span>{a.name}</span>
@@ -49,9 +48,11 @@ export default function SetupScreen({ state, dispatch }: { state: State; dispatc
                   <div className="profile-meta">{TEAM_TITLES[a.id] ?? '팀 메이트'}</div>
                 </div>
                 <div className="profile-action">
-                  <span className={`role-pill ${a.role === 'host' ? 'host' : a.role === 'required' ? 'required' : ''}`}>
-                    {a.role === 'host' ? '주최자' : a.role === 'required' ? '꼭 참석' : '선택 참석'}
-                  </span>
+                  {a.role !== 'optional' && (
+                    <span className={`role-pill ${a.role === 'host' ? 'host' : 'required'}`}>
+                      {a.role === 'host' ? '주최자' : '꼭 참석'}
+                    </span>
+                  )}
                 </div>
               </>
             )
@@ -81,8 +82,4 @@ export default function SetupScreen({ state, dispatch }: { state: State; dispatc
       </div>
     </div>
   )
-}
-
-function avatarText(name: string): string {
-  return name === '나' ? '나' : name.slice(0, 1)
 }

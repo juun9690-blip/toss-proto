@@ -13,14 +13,25 @@
   --brand: #3182f6;
   --brand-hover: #2272eb;
   --brand-weak: #e8f3ff;
+  --brand-strong: #1454b8;
   --ok: #03b26c;
   --ok-weak: rgba(3, 178, 108, 0.1);
+  --ok-strong: #008f58;
   --warn: #fe9800;
   --warn-weak: rgba(254, 152, 0, 0.11);
+  --warn-strong: #c76f00;
   --danger: #f04452;
   --danger-weak: rgba(240, 68, 82, 0.1);
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-raise: 0 4px 14px rgba(25, 31, 40, 0.08);
+  --ring: inset 0 0 0 2px var(--brand);
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-pill: 9999px;
+  --calendar-event-radius: 8px;
+  --calendar-rec-radius: 8px;
 
   /* ── 모션 토큰 (마이크로 인터랙션) ── */
   --dur-fast: 200ms;   /* hover · 상태 색 전환 */
@@ -54,7 +65,7 @@ body,
 
 body {
   margin: 0;
-  font-family: "Toss Product Sans", "Tossface", "SF Pro KR", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", Roboto, sans-serif;
+  font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "SF Pro KR", "SF Pro Display", "Apple SD Gothic Neo", "Noto Sans KR", Roboto, sans-serif;
   background: var(--bg);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
@@ -65,6 +76,21 @@ button,
 input,
 textarea {
   font: inherit;
+}
+
+button:focus-visible,
+[role="button"]:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+button:active:not(:disabled),
+[role="button"]:active {
+  transform: scale(0.985);
+}
+
+button:disabled {
+  cursor: not-allowed;
 }
 
 b {
@@ -94,23 +120,133 @@ b {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  border: 0;
+  padding: 0;
+  background: transparent;
   color: var(--ink);
   font-size: 16px;
   font-weight: 700;
   line-height: 24px;
   white-space: nowrap;
+  cursor: pointer;
+}
+
+.topbar .brand:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 4px;
+  border-radius: 6px;
 }
 
 .topbar .brand .mk {
+  width: 32px;
+  height: 32px;
+  display: block;
+  flex: 0 0 auto;
+  object-fit: contain;
+}
+
+.github-link {
+  margin-left: auto;
+  min-height: 36px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-strong);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  text-decoration: none;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.github-link::after {
+  content: "";
+  position: absolute;
+  left: 28px;
+  right: 0;
+  bottom: 5px;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left center;
+  opacity: 0.45;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.github-link:hover {
+  color: var(--brand-hover);
+  transform: translateY(-1px);
+}
+
+.github-link:hover::after {
+  transform: scaleX(1);
+}
+
+.github-link:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 5px;
+  border-radius: 6px;
+}
+
+.github-link:active {
+  transform: translateY(0) scale(0.985);
+}
+
+.github-mark {
   width: 18px;
   height: 18px;
-  display: inline-grid;
-  place-items: center;
-  border-radius: 6px;
-  background: var(--brand);
+  flex: 0 0 auto;
+  fill: currentColor;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.github-link span {
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.github-link:hover .github-mark {
+  transform: rotate(-8deg) scale(1.08);
+}
+
+.github-link:hover span {
+  transform: translateX(2px);
+}
+
+/* 한 사이클(회의 확정)을 끝내면 GitHub 링크를 강조 — 은은한 텍스트 링크에서 'GitHub 알약'으로 변신하며
+   퍼지는 비콘(잔물결)으로 '이제 코드도 보러 가세요'를 알린다. */
+.github-link.emphasized {
+  padding: 0 14px;
+  border-radius: 9999px;
+  background: var(--ink-strong);
   color: #fff;
-  font-size: 9px;
-  line-height: 1;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-base) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+  animation: githubReveal var(--dur-enter) var(--ease-out), githubBeacon 2s var(--ease-out) var(--dur-enter) infinite;
+}
+.github-link.emphasized::after { display: none; } /* 알약이므로 밑줄 스윕 제거 */
+.github-link.emphasized:hover {
+  color: #fff;
+  background: #000;
+  transform: translateY(-1px);
+}
+.github-link.emphasized:hover .github-mark { transform: rotate(-8deg) scale(1.12); }
+@keyframes githubReveal {
+  0% { transform: scale(0.9); opacity: 0.55; }
+  60% { transform: scale(1.04); }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes githubBeacon {
+  0% { box-shadow: 0 0 0 0 rgba(49, 130, 246, 0.5); }
+  65% { box-shadow: 0 0 8px 16px rgba(49, 130, 246, 0); }
+  100% { box-shadow: 0 0 8px 16px rgba(49, 130, 246, 0); }
 }
 
 .layout {
@@ -237,6 +373,81 @@ h2 {
   line-height: 24px;
 }
 
+.importance-summary {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.importance-summary strong,
+.importance-summary em {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 6px;
+  color: var(--brand-hover);
+  font-style: normal;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 24px;
+  animation: importanceManualChange 220ms var(--ease-out) both;
+}
+
+.importance-summary.auto strong,
+.importance-summary.auto em {
+  min-width: 32px;
+  /* base(요약 카드 등): 값은 사라지지 않고 짧게 굴러 들어온다. */
+  animation: importanceAutoValue 560ms var(--ease-out) both;
+}
+
+/* '자동 계산됨' 힌트 — 값 뒤로 브랜드 컬러가 한 번 훑고 지나간다(로딩 점 대신). */
+.importance-summary.auto strong::before,
+.importance-summary.auto em::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0; /* 애니메이션 끝나면 남지 않도록 정적 상태는 투명 */
+  /* 뚜렷한 선이 아니라 부드러운 빛 번짐 — 넓은 그라데이션 + 살짝 블러로 경계를 흐린다. */
+  background: linear-gradient(115deg, transparent 20%, rgba(49, 130, 246, 0.28) 50%, transparent 80%);
+  filter: blur(2px);
+  animation: importanceSweep 440ms var(--ease-out);
+  pointer-events: none;
+}
+
+/* 참석자 화면 — '계산 → 결과' 순서: 스윕이 2~3번 도는 동안 값은 숨고, 끝난 뒤
+   '높음'과 '꼭 참석 N명 기준' 문구가 이어서 등장한다. base보다 구체적이라 이 화면에서만 적용. */
+.reveal-section .importance-summary.auto strong,
+.reveal-section .importance-summary.auto em {
+  animation: importanceAutoCalc 1500ms var(--ease-out) both;
+}
+.reveal-section .importance-summary.auto strong::before,
+.reveal-section .importance-summary.auto em::before {
+  animation: importanceSweep 440ms var(--ease-out) 3;
+}
+.reveal-section .importance-summary.auto small {
+  display: inline-block;
+  animation: importanceHintReveal 460ms var(--ease-out) 1320ms both;
+}
+
+.importance-summary small {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.form-section > .seg {
+  width: max-content;
+  max-width: 100%;
+}
+
 .check-section {
   display: flex;
   flex-direction: column;
@@ -292,7 +503,7 @@ h2 {
   border-radius: 14px;
   padding: 10px 12px;
   background: var(--ok-weak);
-  color: #008f58;
+  color: var(--ok-strong);
 }
 
 .approval-line span {
@@ -308,12 +519,38 @@ h2 {
   font-weight: 800;
 }
 
+.approval-line .round-check {
+  width: 13px;
+  height: 13px;
+  stroke-width: 3.4;
+}
+
 .approval-line p {
   margin: 0;
-  color: #008f58;
+  color: var(--ok-strong);
   font-size: 13px;
   font-weight: 700;
   line-height: 20px;
+}
+
+.coordination-status {
+  gap: 10px;
+}
+
+.coordination-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.coordination-head p {
+  margin: 0;
+  min-width: 0;
+  color: var(--sub);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 20px;
+  word-break: keep-all;
 }
 
 .decision-action {
@@ -491,7 +728,7 @@ button {
   font-size: 15px;
   font-weight: 600;
   line-height: 22px;
-  transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease, transform var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
 
 button:hover {
@@ -555,6 +792,11 @@ button:disabled {
 
 .action-row button {
   width: 100%;
+  white-space: nowrap;
+}
+
+.respond-action-row {
+  grid-template-columns: minmax(150px, max-content) minmax(0, 1fr);
 }
 
 .confirm-action {
@@ -563,6 +805,59 @@ button:disabled {
 
 .confirm-action button {
   width: 100%;
+}
+
+.confirm-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 0 2px;
+  text-align: center;
+}
+
+.confirm-hero h1 {
+  width: 100%;
+  margin: 4px 0 0;
+  color: var(--ink);
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 38px;
+  word-break: keep-all;
+}
+
+.confirm-kicker {
+  margin: 12px 0 0;
+  color: var(--ok-strong);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 22px;
+}
+
+.confirm-meta {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-top: 10px;
+  color: var(--ink-strong);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 22px;
+}
+
+.confirm-meta span + span::before {
+  content: "·";
+  margin-right: 10px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.confirm-subnote {
+  margin: 6px 0 0;
+  color: var(--sub);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
 }
 
 .confirm-profiles {
@@ -620,6 +915,12 @@ button:disabled {
 .role-pill.host {
   background: rgba(2, 32, 71, 0.05);
   color: var(--sub);
+}
+
+.role-pill.coordination {
+  background: var(--brand-weak);
+  color: var(--brand-hover);
+  font-weight: 800;
 }
 
 .cal-head {
@@ -716,7 +1017,7 @@ button:disabled {
 }
 
 .weekgrid .gh {
-  background: var(--surface-weak);
+  background: transparent;
   border-bottom: 1px solid var(--line);
   color: var(--ink);
   font-size: 13px;
@@ -745,10 +1046,6 @@ button:disabled {
   border-top: 1px solid var(--surface);
   border-left: 1px solid var(--surface);
   padding: 3px;
-}
-
-.cell.lunch {
-  background: repeating-linear-gradient(45deg, #f9fafb, #f9fafb 6px, #f2f4f6 6px, #f2f4f6 12px);
 }
 
 .cell.highlight {
@@ -797,7 +1094,7 @@ button:disabled {
   background: var(--canvas);
 }
 
-.opt.hero {
+.opt.brand {
   border-color: rgba(49, 130, 246, 0.24);
   background: var(--brand-weak);
 }
@@ -832,7 +1129,7 @@ button:disabled {
 
 .badge.ok {
   background: var(--ok-weak);
-  color: var(--ok);
+  color: var(--ok-strong);
 }
 
 .badge.off {
@@ -842,7 +1139,7 @@ button:disabled {
 
 .badge.warn {
   background: var(--warn-weak);
-  color: #c76f00;
+  color: var(--warn-strong);
 }
 
 .badge.danger {
@@ -850,12 +1147,12 @@ button:disabled {
   color: var(--danger);
 }
 
-.badge.hero {
+.badge.brand {
   background: var(--brand);
   color: #fff;
 }
 
-.badge.hero-soft {
+.badge.brand-weak {
   background: var(--brand-weak);
   color: var(--brand-hover);
 }
@@ -880,7 +1177,7 @@ button:disabled {
 
 .section-hint {
   margin: -2px 0 0;
-  color: #c76f00;
+  color: var(--warn-strong);
   font-size: 13px;
   font-weight: 600;
   line-height: 20px;
@@ -897,6 +1194,22 @@ button:disabled {
   background: var(--brand-weak);
 }
 
+.candidate-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.candidate-title-row h1 {
+  margin: 0;
+  min-width: 0;
+}
+
+.candidate-title-row .role-pill {
+  margin-top: 4px;
+  flex: 0 0 auto;
+}
+
 .adjustment-header {
   display: flex;
   flex-direction: column;
@@ -911,15 +1224,45 @@ button:disabled {
   word-break: keep-all;
 }
 
+/* 받는 사람 이름 — 인원수 숫자와 같은 결로 '떨어져' 들어와 시선을 이름 하나에 모은다.
+   (밑줄 없음 — 장식보다 이름 자체의 등장으로 주의를 집중) */
 .adjustment-header .quoted-name {
+  display: inline-block;
   color: var(--brand-hover);
+  /* 페이지 슬라이드-인(460ms)에 묻히지 않게 화면이 자리잡을 즈음 시작한다(짧게 톡) */
+  animation: recipientDrop 460ms var(--ease-out) 240ms both;
+}
+
+@keyframes recipientDrop {
+  0% { opacity: 0; transform: translateY(-0.5em) scale(0.9); }
+  100% { opacity: 1; transform: none; }
 }
 
 .adjustment-card {
   display: flex;
   flex-direction: column;
+  margin-top: -2px;
   padding: 0;
   background: transparent;
+}
+
+.adjustment-result-line {
+  margin: 0;
+  color: var(--ok-strong);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 24px;
+  word-break: keep-all;
+}
+
+/* 명분 라인 — 결과 아래 보조 근거. 일정을 평가하는 중립적 회색 본문(사람 평가 아님). */
+.adjustment-rationale-line {
+  margin: 4px 0 0;
+  color: var(--sub);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 20px;
+  word-break: keep-all;
 }
 
 .adjustment-type {
@@ -973,7 +1316,7 @@ button:disabled {
   font-weight: 700;
   line-height: 20px;
   white-space: nowrap;
-  transition: background-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+  transition: background-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
 .importance-toggle:hover {
@@ -1007,7 +1350,7 @@ button:disabled {
   border-bottom: 2px solid currentColor;
   color: #8b95a1;
   transform: rotate(45deg) translateY(-2px);
-  transition: transform 0.15s ease;
+  transition: transform var(--dur-fast) ease;
 }
 
 .importance-toggle.open em {
@@ -1024,6 +1367,65 @@ button:disabled {
 .request-insight-row.pair {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.request-rationale {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--sub);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 21px;
+  word-break: keep-all;
+}
+
+.request-rationale.has-perfect-link {
+  display: block;
+}
+
+.request-rationale button {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  max-width: 100%;
+  min-height: 28px;
+  padding: 0;
+  background: transparent;
+  color: var(--brand-hover);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 22px;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.soft-chevron,
+.top-alt-section .alt-toggle-arrow {
+  flex: 0 0 auto;
+  width: 11px;
+  height: 11px;
+  background: currentColor;
+  transform: translateY(0.5px);
+  transition: transform var(--dur-fast) ease;
+  -webkit-mask:
+    url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4.5 2.8L7.7 6L4.5 9.2' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    center / 12px 12px no-repeat;
+  mask:
+    url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4.5 2.8L7.7 6L4.5 9.2' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    center / 12px 12px no-repeat;
+}
+
+.soft-chevron.right {
+  transform: translateY(0.5px);
+}
+
+.request-rationale button:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .request-section-divider {
@@ -1066,7 +1468,7 @@ button:disabled {
   font-weight: 500;
   line-height: 24px;
   outline: none;
-  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color var(--dur-fast) ease, background-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
 
 .request-message-field textarea:hover {
@@ -1119,16 +1521,6 @@ button:disabled {
   flex-wrap: wrap;
 }
 
-.response-actions {
-  display: grid;
-  grid-template-columns: 1.3fr 1fr;
-  gap: 10px;
-}
-
-.response-actions button {
-  width: 100%;
-}
-
 .handoff {
   min-height: 420px;
   display: flex;
@@ -1149,6 +1541,17 @@ button:disabled {
   color: var(--brand-hover);
   font-size: 28px;
   font-weight: 800;
+}
+
+.round-check {
+  width: 28px;
+  height: 28px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .reason-card .from {
@@ -1174,20 +1577,44 @@ button:disabled {
   border-radius: 14px;
   padding: 12px;
   background: var(--ok-weak);
-  color: #008f58;
+  color: var(--ok-strong);
   font-size: 13px;
   line-height: 20px;
 }
 
-.impact strong {
+.impact > strong:not(.importance-summary) {
   flex: 0 0 auto;
   border-radius: 9999px;
   padding: 3px 8px;
   background: #fff;
-  color: #008f58;
+  color: var(--ok-strong);
   font-size: 12px;
   font-weight: 800;
   line-height: 18px;
+}
+
+.impact .importance-summary {
+  flex: 0 0 auto;
+  gap: 5px;
+  color: var(--ok-strong);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.impact .importance-summary span {
+  color: var(--ok-strong);
+}
+
+.impact .importance-summary em {
+  color: var(--brand-hover);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.impact .importance-summary small {
+  color: rgba(0, 143, 88, 0.78);
+  font-size: 11px;
+  line-height: 16px;
 }
 
 label.field {
@@ -1197,7 +1624,7 @@ label.field {
   font-size: 13px;
   font-weight: 600;
   line-height: 20px;
-  transition: color 0.15s ease;
+  transition: color var(--dur-fast) ease;
 }
 
 label.field.compact {
@@ -1218,7 +1645,16 @@ label.field input {
   font-weight: 400;
   line-height: 24px;
   outline: none;
-  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color var(--dur-fast) ease, background-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
+}
+
+label.field input::placeholder {
+  color: #b8c0c8;
+  font-weight: 400;
+}
+
+.create-form label.field input::placeholder {
+  color: #c6cdd4;
 }
 
 .create-form label.field {
@@ -1348,29 +1784,31 @@ label.field input:focus {
 }
 
 .room-option.booked {
-  border-color: transparent;
-  background: transparent;
+  border-color: rgba(254, 152, 0, 0.24);
+  background: rgba(254, 152, 0, 0.055);
 }
 
 .room-option.booked em {
-  background: rgba(2, 32, 71, 0.05);
-  color: var(--sub);
+  background: rgba(254, 152, 0, 0.16);
+  color: var(--warn-strong);
 }
 
-/* 예약 확인이 필요한 방은 선택 상태처럼 보이지 않게 기본 톤을 낮춘다. */
+/* 예약된 회의실은 사람 일정 충돌과 같은 주황 위계로 보여준다. */
 .room-option.negotiable {
-  border-color: transparent;
-  background: transparent;
+  border-color: rgba(254, 152, 0, 0.28);
+  background: rgba(254, 152, 0, 0.07);
 }
 
+/* 예약 보기 배지는 이동 가능/불가 상관없이 같은 주황 소프트로 통일한다.
+   (솔리드 채움은 사용자가 눌러 '보는 중'(focused)일 때만) */
 .room-option.negotiable em {
-  background: rgba(2, 32, 71, 0.05);
-  color: var(--sub);
+  background: rgba(254, 152, 0, 0.16);
+  color: var(--warn-strong);
 }
 
 .room-option.booked:hover,
 .room-option.negotiable:hover {
-  background: rgba(2, 32, 71, 0.05);
+  background: rgba(254, 152, 0, 0.1);
 }
 
 .room-option.focused {
@@ -1404,25 +1842,6 @@ label.field input:focus {
 .room-option.declined.focused em {
   background: var(--danger);
   color: #fff;
-}
-
-.room-request {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 10px;
-  border: 1px solid rgba(254, 152, 0, 0.3);
-  border-radius: 14px;
-  padding: 14px;
-  background: var(--warn-weak);
-}
-
-.room-request .primary {
-  min-height: 44px;
-  flex: 0 0 auto;
-  padding: 0 16px;
-  font-size: 15px;
 }
 
 .note {
@@ -1465,6 +1884,43 @@ label.field input:focus {
 
 .setup-content .profile-list {
   padding-top: 0;
+}
+
+.setup-content .profile-row.compact.attendee-select-row {
+  position: relative;
+  isolation: isolate;
+  gap: 16px;
+  min-height: 76px;
+  padding: 12px 14px;
+  border-radius: 18px;
+}
+
+/* 호버(회색)·선택(파랑)을 '같은 inset 박스'에 색만 채워 통일 — 가장자리까지 꽉 차지 않게 간격을 둔다.
+   (예전엔 회색=행 전체, 파랑=inset이라 크기가 어긋났고, 반대로 둘 다 꽉 채우면 답답했다) */
+.setup-content .attendee-select-row > * { position: relative; z-index: 1; }
+.setup-content .attendee-select-row::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 6px 8px;
+  border-radius: 14px;
+  background: transparent;
+  transition: background-color var(--dur-fast) ease;
+  pointer-events: none;
+}
+.setup-content .attendee-select-row,
+.setup-content .attendee-select-row:hover,
+.setup-content .attendee-select-row.selected,
+.setup-content .attendee-select-row.selected:hover { background: transparent; }
+.setup-content .attendee-select-row:hover::before { background: rgba(2, 32, 71, 0.05); }
+.setup-content .attendee-select-row.selected::before { background: rgba(49, 130, 246, 0.08); }
+.setup-content .attendee-select-row.selected:hover::before { background: rgba(49, 130, 246, 0.11); }
+
+.setup-content .profile-row.compact.attendee-select-row .avatar {
+  width: 52px;
+  height: 52px;
+  flex-basis: 52px;
+  font-size: 18px;
 }
 
 .team-name {
@@ -1524,7 +1980,7 @@ label.field input:focus {
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  transition: background-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
 
 .profile-row.compact.attendee-select-row {
@@ -1575,17 +2031,22 @@ label.field input:focus {
   flex: 0 0 56px;
   display: grid;
   place-items: center;
+  overflow: hidden;
   border-radius: 50%;
-  background: linear-gradient(145deg, #e8f3ff, #d7f5e8);
+  background: var(--surface-weak);
   color: var(--ink);
   font-size: 20px;
   font-weight: 800;
   box-shadow: inset 0 0 0 1px rgba(2, 32, 71, 0.05);
 }
 
-.profile-row:nth-child(2n) .avatar {
-  background: linear-gradient(145deg, #fff4d6, #e8f3ff);
+.avatar img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
 }
+
 
 .profile-row:nth-child(3n) .avatar {
   background: linear-gradient(145deg, #f2f4f6, #e6fcf5);
@@ -1707,6 +2168,14 @@ label.field input:focus {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
 }
 
+.mode-seg {
+  width: max-content;
+}
+
+.duration-pick-note {
+  margin: 2px 0 0;
+}
+
 .day-nav {
   display: flex;
   align-items: center;
@@ -1759,7 +2228,6 @@ label.field input:focus {
 }
 
 .day-row:first-child { border-top: none; }
-.day-row.lunch { background: repeating-linear-gradient(45deg, #f9fafb, #f9fafb 6px, #f2f4f6 6px, #f2f4f6 12px); }
 .day-row.highlight { background: var(--brand-weak); outline: 2px solid var(--brand); outline-offset: -2px; }
 .day-row.moved { background: var(--ok-weak); }
 
@@ -1858,13 +2326,73 @@ label.field input:focus {
   text-overflow: ellipsis;
 }
 
+.mev.cat-review,
+.cal2-block.ev.cat-review {
+  --event-bg: #e8f3ff;
+  --event-text: var(--brand-strong);
+}
+
+.mev.cat-planning,
+.cal2-block.ev.cat-planning {
+  --event-bg: var(--brand-weak);
+  --event-text: var(--brand-hover);
+}
+
+.mev.cat-note,
+.cal2-block.ev.cat-note {
+  --event-bg: #e9f8ef;
+  --event-text: var(--ok-strong);
+}
+
+.mev.cat-deadline,
+.cal2-block.ev.cat-deadline {
+  --event-bg: #f1f3f5;
+  --event-text: #4e5968;
+}
+
+.mev.cat-room,
+.cal2-block.ev.cat-room {
+  --event-bg: #f2f4f6;
+  --event-text: #4e5968;
+}
+
+.mev.cat-work,
+.cal2-block.ev.cat-work {
+  --event-bg: #e8f3ff;
+  --event-text: var(--brand-strong);
+}
+
+.month-view.event-colorful .mev {
+  background: var(--event-bg, #e8f3ff);
+  color: var(--event-text, var(--brand-strong));
+  box-shadow: none;
+}
+
+.month-view.event-muted .mev {
+  background: rgba(2, 32, 71, 0.06);
+  color: var(--sub);
+  box-shadow: none;
+}
+
 .mev.meeting {
-  background: var(--brand);
-  color: #fff;
+  position: relative;
+  background: var(--surface);
+  color: var(--sub);
   font-weight: 700;
 }
 
+.mev.meeting.meeting-pending {
+  background: var(--surface);
+  color: var(--sub);
+}
+
+.mev.meeting.meeting-confirmed {
+  background: var(--brand);
+  color: #fff;
+}
+
 .cal2 {
+  position: relative;
   display: grid;
   grid-template-columns: 56px repeat(5, minmax(112px, 1fr));
   width: 100%;
@@ -1922,14 +2450,8 @@ label.field input:focus {
 
 .cal2-col {
   position: relative;
+  overflow: hidden;
   border-left: 1px solid var(--surface);
-}
-
-.cal2-lunch {
-  position: absolute;
-  left: 0;
-  right: 0;
-  background: repeating-linear-gradient(45deg, #f9fafb, #f9fafb 6px, #f2f4f6 6px, #f2f4f6 12px);
 }
 
 .cal2-block {
@@ -1937,7 +2459,7 @@ label.field input:focus {
   left: 5px;
   right: 5px;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: var(--calendar-event-radius, 8px);
   padding: 7px 8px;
   color: #fff;
   font-size: 13px;
@@ -1948,6 +2470,16 @@ label.field input:focus {
   font-weight: 800;
 }
 
+.event-copy {
+  position: relative;
+  z-index: 1;
+  display: block;
+  overflow: hidden;
+  min-width: 0;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 .cal2-block.ev.fixed {
   background: #6b7684;
 }
@@ -1956,9 +2488,103 @@ label.field input:focus {
   background: #8b95a1;
 }
 
+.cal2-block.ev.context {
+  z-index: 1;
+  background: rgba(2, 32, 71, 0.06);
+  color: var(--ink-strong);
+  box-shadow: inset 0 0 0 1px rgba(2, 32, 71, 0.04);
+}
+
+.cal2-block.ev.context b {
+  color: var(--ink-strong);
+}
+
+.cal2-block.ev.meeting {
+  z-index: 1;
+  background: var(--surface);
+  color: var(--sub);
+  box-shadow: inset 0 0 0 1px rgba(2, 32, 71, 0.04);
+  transition: background-color var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+}
+
+.cal2-block.ev.meeting b {
+  color: inherit;
+}
+
+.cal2-block.ev.meeting .meeting-fill {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: var(--brand-weak);
+  opacity: 0.9;
+  transform: scaleX(var(--meeting-progress, 0));
+  transform-origin: left center;
+  transition: transform var(--dur-slow) var(--ease-move), background-color var(--dur-base) var(--ease-out), opacity var(--dur-base) var(--ease-out);
+}
+
+.cal2-block.ev.meeting.meeting-pending {
+  background: #f2f4f6;
+  color: var(--sub);
+  /* '참석 확인 중' = 아직 잡히는 중 → 밖으로 퍼지는 파란 잔물결로 '준비 중'임을 알린다(추천 글로우와 같은 결) */
+  animation: meetingPreparing 1.7s var(--ease-out) infinite;
+}
+@keyframes meetingPreparing {
+  0% { box-shadow: 0 0 0 0 rgba(49, 130, 246, 0.42); }
+  70% { box-shadow: 0 0 0 9px rgba(49, 130, 246, 0); }
+  100% { box-shadow: 0 0 0 9px rgba(49, 130, 246, 0); }
+}
+
+.cal2-block.ev.meeting.meeting-confirmed {
+  background: var(--brand);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18), 0 4px 12px rgba(49, 130, 246, 0.2);
+}
+
+.cal2-block.ev.meeting.meeting-confirmed .meeting-fill {
+  background: var(--brand);
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.meeting-state-text {
+  display: block;
+  overflow: hidden;
+  margin-top: 1px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 15px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  opacity: 0.82;
+}
+
+.cal2.event-muted .cal2-block.ev.fixed,
+.cal2.event-muted .cal2-block.ev.flex,
+.cal2.event-muted .cal2-block.ev.context {
+  background: rgba(2, 32, 71, 0.07);
+  color: var(--sub);
+  box-shadow: inset 0 0 0 1px rgba(2, 32, 71, 0.04);
+}
+
+.cal2.event-muted .cal2-block.ev b {
+  color: inherit;
+}
+
+.cal2.event-colorful .cal2-block.ev.fixed,
+.cal2.event-colorful .cal2-block.ev.flex,
+.cal2.event-colorful .cal2-block.ev.context {
+  background: var(--event-bg, #e8f3ff);
+  color: var(--event-text, var(--brand-strong));
+  box-shadow: inset 0 0 0 1px rgba(2, 32, 71, 0.035);
+}
+
+.cal2.event-colorful .cal2-block.ev b {
+  color: inherit;
+}
+
 .cal2-block.ev.adjustable {
   z-index: 3;
-  background: #64a8ff;
+  background: var(--brand);
   outline: 3px solid var(--brand);
   outline-offset: -1px;
   box-shadow: 0 4px 12px rgba(49, 130, 246, 0.2);
@@ -1967,7 +2593,7 @@ label.field input:focus {
 .cal2-block.ev.moved {
   z-index: 3;
   background: var(--ok);
-  outline: 2px dashed #008f58;
+  outline: 2px dashed var(--ok-strong);
 }
 
 .cal2-block.hi {
@@ -1983,15 +2609,18 @@ label.field input:focus {
 }
 
 .cal2-block.hi.has-detail {
+  flex-direction: column;
   align-items: flex-start;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 2px;
   padding: 8px 10px;
   text-align: left;
 }
 
-.cal2-block.hi.has-detail b {
+.cal2-block.hi.has-detail .hi-title {
   overflow: hidden;
   width: 100%;
+  min-width: 0;
   color: #fff;
   font-size: 13px;
   font-weight: 800;
@@ -2000,15 +2629,39 @@ label.field input:focus {
   text-overflow: ellipsis;
 }
 
-.cal2-block.hi.has-detail span {
+.cal2-block.hi.has-detail .hi-meta {
   overflow: hidden;
   width: 100%;
+  min-width: 0;
+  margin-top: 0;
   color: rgba(255, 255, 255, 0.86);
   font-size: 11px;
   font-weight: 700;
   line-height: 16px;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.cal2-block.hi.recommended {
+  z-index: 6;
+}
+
+.cal2-block.hi .hi-rec-tag,
+.cal2-block.hi.has-detail .hi-rec-tag {
+  display: inline-flex;
+  align-items: center;
+  width: max-content;
+  max-width: 100%;
+  min-height: 20px;
+  margin-top: 4px;
+  border-radius: 9999px;
+  padding: 0 7px;
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 16px;
+  white-space: nowrap;
 }
 
 .cal2-block.hi.reference {
@@ -2025,9 +2678,167 @@ label.field input:focus {
   justify-content: center;
   border: 1.5px dashed var(--ok);
   background: var(--ok-weak);
-  color: #008f58;
+  color: var(--ok-strong);
   font-weight: 800;
   box-shadow: none;
+}
+
+/* 계산 연출 v2 — 후보 소거. 내 일정 없는 빈칸에 '추천 하늘색' 후보 박스가 흩뿌려 깔렸다가(calcBoxIn),
+   비용 사다리 순서로 조용히 사라진다(calcBoxOut). 모든 시간이 후보 → 한 칸만 남아 마커가 된다.
+   지연은 App이 계산해 --d-in(깔기)·--d-out(소거)로 전달. 생존 칸은 --d-out 없이 남아 마커가 이어받는다. */
+.cal2-calc-box {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  z-index: 4;
+  border-radius: var(--calendar-rec-radius, 8px); /* 추천 마커와 동일한 라운드·색 */
+  border: none;
+  background: rgba(49, 130, 246, 0.10);
+  pointer-events: none;
+  /* 소거 속도는 칸마다(--out-dur) 달라 — 하나하나 제 시간에 투명도·크기가 줄며 사라진다 */
+  animation:
+    calcBoxIn var(--dur-fast) var(--ease-out) var(--d-in, 0ms) backwards,
+    calcBoxOut var(--out-dur, 360ms) var(--ease-in) var(--d-out, 999999ms) forwards;
+}
+
+/* 생존 칸 = 추천 세트 전부. best만 도드라지지 않게 다른 후보 박스와 '똑같이' 남아 있다가
+   (--d-out 없음 → 소거 안 됨), 마지막에 다 같이 마커로 넘어간다. 별도 강조 없음. */
+
+@keyframes calcBoxIn {
+  from { opacity: 0; transform: scale(0.92) translateY(3px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* 개별 소거 — 투명도 0 + 크기 축소가 또렷하게 보이도록 */
+@keyframes calcBoxOut {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.6); }
+}
+
+.cal2-rec {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px dashed rgba(49, 130, 246, 0.38);
+  border-radius: var(--calendar-rec-radius);
+  padding: 0 10px;
+  background: rgba(49, 130, 246, 0.10);
+  color: var(--brand-hover);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 18px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  box-shadow: none;
+  /* 별도 착지(pop) 없음 — 소거 박스가 그 자리에서 morphing 벗겨지며 마커가 되도록 transition으로 모프 */
+  transition: background-color var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out), box-shadow var(--dur-fast) ease, transform var(--dur-fast) ease;
+}
+
+/* 토글로 추천을 다시 열 때 마커가 뚝 뜨지 않게 — 아래에서 살짝 떠오르며(요일별 시차) 등장.
+   morphing(계산 연출)과 배타적이라 계산 경로는 건드리지 않는다. backwards로 hover transform과도 안 싸움. */
+.cal2-rec.rec-enter {
+  animation: recEnter var(--dur-enter) var(--ease-out) calc(var(--rec-day, 0) * 45ms) backwards;
+}
+@keyframes recEnter {
+  from { opacity: 0; transform: translateY(7px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+.cal2-rec.primary {
+  left: 5px;
+  right: 5px;
+  border-width: 1.5px;
+  border-color: rgba(49, 130, 246, 0.74);
+  border-radius: var(--calendar-event-radius, 8px);
+  background: rgba(49, 130, 246, 0.15);
+  color: var(--brand-hover);
+  font-weight: 800;
+  overflow: visible;
+}
+
+/* primary 추천만 그림자 blink를 준다. R값은 기존 캘린더 일정 블록과 같은 값을 따라간다.
+   속도는 '일정 확인' 버튼 글로우(1.4s ease-out 핑)와 같은 박자로 — 더 빠르고 눈에 띄게. */
+.cal2-rec.primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: recBreathGlow 1.4s var(--ease-out) infinite;
+}
+
+.cal2-rec.secondary {
+  z-index: 7;
+}
+
+/* 계산 연출 중 마커 = '후보 박스' 모습: 점선·라벨·글로우를 숨기고 소거 박스와 같은 색으로 함께 깔린다.
+   소거가 끝나 morphing이 벗겨지면 배경·테두리·라벨이 transition으로 자연스럽게 마커가 된다(뿅 없음). */
+.cal2-rec.morphing {
+  border-color: transparent;
+  background: rgba(49, 130, 246, 0.10);
+  box-shadow: none;
+  animation: calcBoxIn var(--dur-fast) var(--ease-out) var(--d-in, 0ms) backwards;
+}
+/* 모프 후 라벨은 '초점이 맞듯' 블러가 풀리며 살짝 떠올라 또렷해진다.
+   박스(배경·테두리)가 먼저 자리잡고 120ms 뒤 글자가 이름을 붙이는 순서 — 요일별로 아주 살짝 어긋난다. */
+.cal2-rec.morphing span {
+  opacity: 0;
+  transform: translateY(5px);
+  filter: blur(4px);
+  transition-delay: 0ms; /* 사라질 땐 지연 없이 */
+}
+.cal2-rec.morphing::after { animation: none; box-shadow: none; }
+
+
+/* 카드 호버 연동 강조 — animation 대신 transition으로(그래야 rec-enter 등장 애니메이션과 안 싸운다).
+   사이드바 카드에 호버하는 동안 마커가 살짝 떠오르며 링이 잡힌다. */
+.cal2-rec.pulse {
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 4px rgba(49, 130, 246, 0.16), 0 4px 12px rgba(49, 130, 246, 0.26);
+}
+
+.cal2-rec:hover,
+.cal2-rec:focus-visible {
+  border-style: solid;
+  border-color: var(--brand);
+  background: rgba(49, 130, 246, 0.13);
+  color: var(--brand-hover);
+  box-shadow: var(--shadow-raise);
+  transform: translateY(-1px);
+}
+
+.cal2-rec.primary:hover,
+.cal2-rec.primary:focus-visible {
+  background: rgba(49, 130, 246, 0.18);
+}
+
+.cal2-rec span {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  transition:
+    opacity var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out),
+    filter var(--dur-base) var(--ease-out);
+  transition-delay: calc(120ms + var(--rec-day, 0) * 40ms); /* 박스 착지 뒤 글자가 또렷해짐 */
+}
+
+
+/* 이중 글로우 — 늘 켜진 은은한 기본 halo(첫 그림자, 항상 보임 → 깜빡 없음) 위에
+   밖으로 퍼지며 사라지는 잔물결(둘째 그림자)을 얹는다. 되돌아오지 않고 한 방향으로 번진다. */
+@keyframes recBreathGlow {
+  0% { box-shadow: 0 0 9px 1px rgba(49, 130, 246, 0.42), 0 0 0 0 rgba(49, 130, 246, 0.5); }
+  70% { box-shadow: 0 0 9px 1px rgba(49, 130, 246, 0.42), 0 0 26px 20px rgba(49, 130, 246, 0); }
+  100% { box-shadow: 0 0 9px 1px rgba(49, 130, 246, 0.42), 0 0 26px 20px rgba(49, 130, 246, 0); }
 }
 
 .cal2-block.ev.concede {
@@ -2042,6 +2853,84 @@ label.field input:focus {
   z-index: 3;
   background: var(--warn);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28), 0 4px 12px rgba(254, 152, 0, 0.18);
+}
+
+.cal2-block.has-event-action {
+  cursor: pointer;
+  outline: 0 solid rgba(49, 130, 246, 0);
+  outline-offset: 0;
+  transition:
+    filter var(--dur-fast) ease,
+    outline-color var(--dur-fast) ease,
+    outline-offset var(--dur-fast) ease,
+    box-shadow var(--dur-fast) ease;
+}
+
+.cal2-block.has-event-action:hover,
+.cal2-block.has-event-action:focus-visible {
+  z-index: 6;
+  outline: 2px solid rgba(49, 130, 246, 0.72);
+  outline-offset: 2px;
+  filter: saturate(1.04);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.36),
+    0 10px 22px rgba(49, 130, 246, 0.2),
+    0 5px 12px rgba(254, 152, 0, 0.12);
+}
+
+.cal2-block.has-event-action:active {
+  transform: none;
+}
+
+/* 칩+버튼을 합친 상시 CTA — 호버 전에도 흰색 버튼으로 '올라와' 있어 누를 수 있음이 보이고,
+   블록에 호버하면 파랑으로 채워지며 누르기 직전 상태가 된다. */
+.event-action-cta {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  border-radius: var(--r-sm);
+  padding: 0 12px;
+  background: #fff;
+  color: var(--warn-strong);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 20px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.14);
+  transform-origin: right bottom;
+  animation: ctaRise var(--dur-base) var(--ease-out) 560ms both;
+  transition:
+    background-color var(--dur-fast) ease,
+    color var(--dur-fast) ease,
+    transform var(--dur-fast) ease,
+    box-shadow var(--dur-fast) ease;
+}
+@keyframes ctaRise {
+  from { opacity: 0; transform: translateY(8px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+/* 쉬는 상태 글씨색은 원래 칩(adjtag)과 동일하게 markMode별로 맞춘다 */
+.event-action-cta.moved,
+.event-action-cta.movedOk { color: var(--ok-strong); }
+.event-action-cta.concede,
+.event-action-cta.requestable,
+.event-action-cta.moveAsk,
+.event-action-cta.attendAsk { color: var(--warn-strong); }
+
+.cal2-block.has-event-action:hover .event-action-cta,
+.cal2-block.has-event-action:focus-within .event-action-cta {
+  background: var(--brand);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(49, 130, 246, 0.34), inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+}
+.cal2-block.has-event-action:active .event-action-cta {
+  transform: none;
+  box-shadow: 0 2px 8px rgba(49, 130, 246, 0.28), inset 0 0 0 1px rgba(255, 255, 255, 0.24);
 }
 
 .cal2-block.ev.conflict {
@@ -2063,6 +2952,60 @@ label.field input:focus {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3), 0 4px 14px rgba(3, 178, 108, 0.24);
 }
 
+.cal2.event-muted .cal2-block.ev.adjustable {
+  z-index: 3;
+  background: var(--brand);
+  color: #fff;
+  outline: 3px solid var(--brand);
+  outline-offset: -1px;
+  box-shadow: 0 4px 12px rgba(49, 130, 246, 0.2);
+}
+
+.cal2.event-muted .cal2-block.ev.concede,
+.cal2.event-muted .cal2-block.ev.requestable,
+.cal2.event-muted .cal2-block.ev.moveAsk,
+.cal2.event-muted .cal2-block.ev.attendAsk {
+  z-index: 3;
+  background: var(--warn);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28), 0 4px 12px rgba(254, 152, 0, 0.18);
+}
+
+.cal2.event-muted .cal2-block.ev.conflict {
+  z-index: 3;
+  background: var(--danger);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28), 0 4px 12px rgba(240, 68, 82, 0.18);
+}
+
+.cal2.event-muted .cal2-block.ev.moved,
+.cal2.event-muted .cal2-block.ev.movedOk {
+  z-index: 3;
+  background: var(--ok);
+  color: #fff;
+}
+
+.cal2.event-muted .cal2-block.ev.reserved {
+  z-index: 3;
+  background: #6b7684;
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28), 0 4px 12px rgba(107, 118, 132, 0.16);
+}
+
+.cal2.event-muted .cal2-block.ev.meeting,
+.cal2.event-colorful .cal2-block.ev.meeting {
+  background: #f2f4f6;
+  color: var(--sub);
+  box-shadow: inset 0 0 0 1px rgba(2, 32, 71, 0.04);
+}
+
+.cal2.event-muted .cal2-block.ev.meeting.meeting-confirmed,
+.cal2.event-colorful .cal2-block.ev.meeting.meeting-confirmed {
+  background: var(--brand);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18), 0 4px 12px rgba(49, 130, 246, 0.2);
+}
+
 .adjtag {
   display: block;
   width: max-content;
@@ -2076,87 +3019,156 @@ label.field input:focus {
   line-height: 15px;
 }
 
-.adjtag.moved { color: #008f58; }
-.adjtag.movedOk { color: #008f58; }
-.adjtag.concede { color: #c76f00; }
-.adjtag.requestable { color: #c76f00; }
-.adjtag.moveAsk, .adjtag.attendAsk { color: #c76f00; }
+.adjtag.moved { color: var(--ok-strong); }
+.adjtag.movedOk { color: var(--ok-strong); }
+.adjtag.concede { color: var(--warn-strong); }
+.adjtag.requestable { color: var(--warn-strong); }
+.adjtag.moveAsk, .adjtag.attendAsk { color: var(--warn-strong); }
 
 /* ── 수신자 이동 목적지 선택 (재계산 대행 + 통제감) ── */
 .move-picker {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 16px;
-  background: var(--surface-weak);
 }
-.move-picker-head { display: flex; flex-direction: column; gap: 3px; }
-.move-picker-head b { color: var(--ink); font-size: 15px; font-weight: 700; line-height: 22px; }
-.move-picker-head span { color: var(--sub); font-size: 13px; line-height: 19px; }
-.move-picker-head strong { color: var(--brand-hover); font-weight: 700; }
-.move-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.move-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 42px;
-  padding: 0 14px;
-  border: 1px solid var(--line-strong);
-  border-radius: 12px;
-  background: #fff;
-  color: var(--ink-strong);
-  font-size: 14px;
-  font-weight: 700;
+.move-picker-head { display: flex; flex-direction: column; gap: 4px; }
+.move-picker-head b { color: var(--ink); font-size: 18px; font-weight: 700; line-height: 26px; }
+.move-picker-head span { color: var(--sub); font-size: 13px; line-height: 20px; }
+.move-target-list { display: grid; gap: 6px; }
+
+/* ── 히어로 카드(1위) — 넓게. 크기·밀도 대비로 추천을 말한다(TDS Progressive density). ── */
+.move-target-hero {
+  display: flex;
+  align-items: center;      /* 단일 줄(시간+칩) — 세로 중앙 정렬로 패딩이 위로 쏠리지 않게 */
+  width: 100%;
+  min-height: 60px;
+  padding: 14px 18px;
+  border: 0;
+  border-radius: 16px; /* Toss Featured card — 히어로(1위)의 위계는 크기·파란 칩으로(라인·그림자·채움 없이) */
+  background: transparent;  /* 평소엔 채움 없음 — 호버할 때만 회색(컴팩트 행과 같은 규칙) */
+  color: var(--ink);
+  text-align: left;
   cursor: pointer;
   opacity: 0;
   transform: translateY(6px);
-  animation: chipIn 0.26s ease forwards;
-  transition: border-color 0.15s, background 0.15s, color 0.15s;
+  animation: chipIn var(--dur-base) var(--ease-out) forwards;
+  transition: background var(--dur-fast);
 }
-.move-chip:hover { border-color: var(--brand); }
-.move-chip.on {
-  border-color: var(--brand);
+.move-target-hero:hover { background: rgba(2, 32, 71, 0.05); }
+.move-target-hero:active { transform: scale(0.985); }
+.move-target-hero.on { background: var(--brand-weak); } /* 선택 = 하늘색 채움만 */
+.move-hero-top { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.move-hero-time { font-size: 18px; font-weight: 700; line-height: 24px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.move-target-hero.on .move-hero-time { color: var(--brand-strong); }
+.move-hero-badge {   /* TDS Badge/Weak/Blue */
+  flex: 0 0 auto;
+  border-radius: 12px;
+  padding: 3px 7px;
+  background: rgba(100, 168, 255, 0.15);
+  color: #2272eb;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+/* ── 컴팩트 행(2위~) — 조밀하게(52px). 구분은 간격으로, 파랑은 선택에만. ── */
+.move-target {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: var(--r-md); /* 12px — 최소 라운드 12 */
+  background: var(--canvas);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(6px);
+  animation: chipIn var(--dur-base) var(--ease-out) forwards;
+  transition: background var(--dur-fast), color var(--dur-fast), box-shadow var(--dur-fast);
+}
+.move-target:hover { background: rgba(2, 32, 71, 0.05); }
+.move-target:active { transform: translateY(1px); }
+.move-target.on {   /* 선택 = 하늘색 채움 + 파란 글자만(라인 없이) */
   background: var(--brand-weak);
   color: var(--brand-hover);
-  box-shadow: 0 2px 8px rgba(49, 130, 246, 0.16);
 }
-.move-chip em {
-  font-style: normal;
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--brand);
+.move-target.on:hover { background: var(--brand-weak); }
+.move-target-time { color: currentColor; font-size: 15px; font-weight: 600; line-height: 22px; font-variant-numeric: tabular-nums; flex: 0 0 auto; }
+.move-target-reason { color: var(--muted); font-size: 13px; font-weight: 400; line-height: 20px; margin-left: auto; text-align: right; }
+.move-target.on .move-target-reason { color: var(--brand-hover); }
+.move-target-more {
+  min-height: 44px;
+  border: 0;
+  border-radius: var(--r-md); /* 12px — 위 컴팩트 행과 같은 라운드로 리듬 통일 */
   background: var(--brand-weak);
-  border-radius: 9999px;
-  padding: 1px 7px;
+  color: var(--brand-hover);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
 }
-.move-chip.on em { background: #fff; }
+.move-target-empty {
+  margin: 0;
+  padding: 14px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--sub);
+  font-size: 14px;
+  line-height: 22px;
+}
 @keyframes chipIn { to { opacity: 1; transform: none; } }
 
-/* 캘린더 위 이동 후보(빈 시간) 셀 — 클릭해서 목적지 선택 */
+/* 캘린더 위 이동 후보 = '연속된 빈 시간대' 밴드 하나. 그 안의 시작점을 골라 목적지를 정한다.
+   (2칸짜리 일정의 시작점들은 서로 겹치므로 개별 박스로 그리지 않고 구간으로 묶는다) */
 .cal2-cand {
   position: absolute;
   left: 5px;
   right: 5px;
-  z-index: 4;
-  display: grid;
-  place-items: center;
-  border: 1.5px dashed var(--brand);
+  z-index: 1; /* 실제 일정 블록(이동된 초록 block: z3)보다 아래 — 답을 가리지 않게 */
+  border: 1.5px dashed rgba(49, 130, 246, 0.5);
   border-radius: 8px;
   background: var(--brand-weak);
-  color: var(--brand-hover);
-  font-size: 12px;
-  font-weight: 800;
-  cursor: pointer;
   opacity: 0;
   transform: scale(0.96);
-  animation: candIn 0.3s ease forwards;
-  transition: background 0.15s, border-color 0.15s;
+  animation: candIn var(--dur-base) var(--ease-out) forwards;
 }
-.cal2-cand:hover { background: rgba(49, 130, 246, 0.18); border-color: var(--brand-hover); }
-.cal2-cand span { pointer-events: none; }
 @keyframes candIn { to { opacity: 1; transform: none; } }
+
+/* 밴드 안의 '여기서 시작' 지점 — 호버/포커스하면 실제 들어갈 길이(span)만큼 미리보기가 뜬다 */
+.cal2-cand-start {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.cal2-cand-start::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: var(--span-h, 100%);
+  border-radius: 6px;
+  background: rgba(49, 130, 246, 0.2);
+  box-shadow: inset 0 0 0 1.5px var(--brand);
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+  pointer-events: none;
+}
+
+.cal2-cand-start:hover::after,
+.cal2-cand-start:focus-visible::after { opacity: 1; }
+
+/* 목적지를 고르는 동안엔 일정 블록이 밴드 위에 '보이기만' 한다. 이미 고른 자리(초록 블록)가
+   그 아래 시작점 버튼을 덮어 다시 못 고르던 문제 — 클릭은 밴드로 통과시킨다. */
+.cal2.cand-mode .cal2-block { pointer-events: none; }
 .adjtag.conflict { color: var(--danger); }
 .adjtag.reserved { color: #4e5968; }
 
@@ -2246,7 +3258,18 @@ label.field input:focus {
   border-radius: 12px;
   padding: 14px;
   background: var(--ok-weak);
-  color: #008f58;
+  color: var(--ok-strong);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* 시간 미선택(바로 진입) 상태의 중립 안내 — 팀/회의실 상태를 아직 평가하지 않음 */
+.pick-first {
+  border-radius: 12px;
+  padding: 14px;
+  background: rgba(2, 32, 71, 0.04);
+  color: var(--sub);
   font-size: 14px;
   font-weight: 600;
   text-align: center;
@@ -2261,6 +3284,23 @@ label.field input:focus {
   border-radius: 14px;
   padding: 7px 8px;
   border: 1px solid transparent;
+}
+
+.avail-item.clickable {
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.avail-item.clickable:hover {
+  transform: none;
+  box-shadow: inset 0 0 0 1px rgba(254, 152, 0, 0.08);
+}
+
+.avail-item.clickable.optional-blocked:hover {
+  box-shadow: inset 0 0 0 1px rgba(49, 130, 246, 0.12);
 }
 
 /* 첫 조율 단계의 충돌은 아직 요청 가능한 상태이므로 주황으로 둔다. */
@@ -2381,11 +3421,14 @@ label.field input:focus {
 
 .inline-action {
   min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
   border-radius: 10px;
   padding: 0 10px;
   background: #fff;
-  color: #c76f00;
+  color: var(--warn-strong);
   font-size: 13px;
   font-weight: 700;
   white-space: nowrap;
@@ -2397,6 +3440,41 @@ label.field input:focus {
 
 .inline-action.danger-tone {
   border: 1px solid rgba(240, 68, 82, 0.18);
+}
+
+/* 일정 확인 버튼 — 추천·계산 연출이 워낙 강렬해서 이 버튼이 묻힌다. 쉬는 동안 은은한 글로우가
+   숨쉬며 '눌러보고 싶게' 만든다. 보는 중(active)이 되면 이미 주목받으므로 글로우를 멈춘다. */
+/* 물결처럼 바깥으로 퍼져 나가는 글로우 — 링이 얇게 시작해 넓게 번지며 사라진다(레이더 핑 느낌) */
+@keyframes actionGlowWarn {
+  0% { box-shadow: 0 0 0 0 rgba(254, 152, 0, 0.45), 0 2px 8px rgba(254, 152, 0, 0.22); }
+  70% { box-shadow: 0 0 0 9px rgba(254, 152, 0, 0), 0 2px 10px rgba(254, 152, 0, 0.28); }
+  100% { box-shadow: 0 0 0 0 rgba(254, 152, 0, 0), 0 2px 8px rgba(254, 152, 0, 0.18); }
+}
+@keyframes actionGlowBrand {
+  0% { box-shadow: 0 0 0 0 rgba(49, 130, 246, 0.45), 0 2px 8px rgba(49, 130, 246, 0.2); }
+  70% { box-shadow: 0 0 0 9px rgba(49, 130, 246, 0), 0 2px 10px rgba(49, 130, 246, 0.26); }
+  100% { box-shadow: 0 0 0 0 rgba(49, 130, 246, 0), 0 2px 8px rgba(49, 130, 246, 0.16); }
+}
+
+.avail-item.blocked:not(.active):not(.declined):not(.accepted) .inline-action {
+  animation: actionGlowWarn 1.4s var(--ease-out) infinite;
+}
+.avail-item.optional-blocked:not(.active):not(.declined):not(.accepted) .inline-action {
+  animation: actionGlowBrand 1.4s var(--ease-out) infinite;
+}
+
+/* 호버하면 숨쉬기를 멈추고 또렷한 글로우로 고정 — 누르기 직전의 확신을 준다 */
+.avail-item.blocked:not(.active) .inline-action:hover {
+  animation: none;
+  box-shadow: 0 0 0 4px rgba(254, 152, 0, 0.2), 0 4px 14px rgba(254, 152, 0, 0.34);
+}
+.avail-item.optional-blocked:not(.active) .inline-action:hover {
+  animation: none;
+  box-shadow: 0 0 0 4px rgba(49, 130, 246, 0.2), 0 4px 14px rgba(49, 130, 246, 0.32);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avail-item .inline-action { animation: none; }
 }
 
 .fixbox {
@@ -2452,7 +3530,31 @@ label.field input:focus {
   gap: 8px;
 }
 
+/* 추천 목록 접기/펴기 — grid 0fr↔1fr 트릭으로 높이를 부드럽게 전환(내용 높이 측정 불필요) */
+.alt-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows var(--dur-base) var(--ease-out),
+    opacity var(--dur-fast) var(--ease-out),
+    margin-top var(--dur-base) var(--ease-out);
+  margin-top: 0;
+}
+
+.alt-collapse.open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  margin-top: 10px;
+}
+
+.alt-collapse-inner {
+  overflow: hidden;
+  min-height: 0; /* grid 행이 0fr로 줄어들 수 있게 */
+}
+
 .alt-slot-button {
+  position: relative;
   display: flex;
   align-items: center;
   width: 100%;
@@ -2466,10 +3568,20 @@ label.field input:focus {
   font-size: 15px;
   font-weight: 700;
   text-align: left;
+  overflow: hidden;
 }
 
 .alt-slot-button:hover {
   background: rgba(2, 32, 71, 0.08);
+}
+
+.alt-slot-button.rec-linked {
+  transition: background-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease, transform var(--dur-fast) ease;
+}
+
+.alt-slot-button.rec-linked.rec-peer-hover {
+  background: rgba(49, 130, 246, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(49, 130, 246, 0.22);
 }
 
 .alt-slot-button > span {
@@ -2478,6 +3590,8 @@ label.field input:focus {
 }
 
 .alt-slot-button em {
+  position: relative;
+  z-index: 1;
   flex: 0 1 auto;
   font-style: normal;
   font-size: 12px;
@@ -2485,6 +3599,39 @@ label.field input:focus {
   line-height: 18px;
   color: var(--brand-hover);
   text-align: right;
+}
+
+.alt-slot-button.magic-slot-button {
+  background: var(--brand-weak);
+  color: var(--brand-hover);
+}
+
+.alt-slot-button.magic-slot-button:hover {
+  background: rgba(49, 130, 246, 0.16);
+}
+
+.alt-slot-button.magic-slot-button > span {
+  position: relative;
+  z-index: 1;
+  color: var(--brand-hover);
+}
+
+.alt-slot-button.magic-slot-button em {
+  color: var(--brand-strong);
+}
+
+.alt-slot-button.magic-loading {
+  cursor: default;
+}
+
+.alt-slot-button.magic-loading::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(100deg, transparent 16%, rgba(255, 255, 255, 0.72) 36%, transparent 58%);
+  background-size: 240% 100%;
+  animation: shimmer 1.05s linear infinite;
 }
 
 .alt-toggle {
@@ -2505,20 +3652,22 @@ label.field input:focus {
 }
 
 .top-alt-section {
-  margin-top: -18px;
+  margin-top: -12px;
 }
 
 .top-alt-section .alt-toggle {
   width: max-content;
-  min-height: 28px;
+  min-height: 34px;
   justify-content: flex-start;
-  gap: 6px;
+  gap: 8px;
   border-bottom: 1px solid transparent;
   border-radius: 0;
   padding: 0;
   background: transparent;
   color: var(--brand-hover);
+  font-size: 16px;
   font-weight: 800;
+  line-height: 24px;
 }
 
 .top-alt-section .alt-toggle:hover {
@@ -2527,16 +3676,12 @@ label.field input:focus {
 }
 
 .top-alt-section .alt-toggle-arrow {
-  width: 7px;
-  height: 7px;
-  border-right: 2px solid var(--brand);
-  border-bottom: 2px solid var(--brand);
-  transform: translateY(-2px) rotate(45deg);
-  transition: transform 0.16s ease;
+  color: var(--brand-hover);
+  transform: rotate(90deg);
 }
 
 .top-alt-section .alt-toggle-arrow.open {
-  transform: translateY(2px) rotate(225deg);
+  transform: rotate(-90deg);
 }
 
 .chev {
@@ -2561,8 +3706,20 @@ label.field input:focus {
   cursor: pointer;
 }
 
+.cal2.pick-mode .slotpick {
+  z-index: 6;
+}
+
 .slotpick:hover {
   background: rgba(49, 130, 246, 0.08);
+}
+
+.slotpick.duration-pick {
+  cursor: ns-resize;
+}
+
+.slotpick.duration-pick:hover {
+  background: rgba(49, 130, 246, 0.12);
 }
 
 .split {
@@ -2586,12 +3743,22 @@ label.field input:focus {
 
 .split-side.theirs {
   border-color: rgba(49, 130, 246, 0.24);
-  background: #fbfdff;
+  background: var(--surface-weak);
+}
+
+.split-side.theirs:has(.has-event-action:hover),
+.split-side.theirs:has(.has-event-action:focus-visible) {
+  border-color: rgba(49, 130, 246, 0.42);
+  box-shadow: 0 8px 24px rgba(49, 130, 246, 0.1);
 }
 
 .split-side .cal2.dayonly {
   max-width: none;
   box-shadow: none;
+  /* .split-side 박스가 이미 프레임이라, 그 안의 캘린더 좌·우 세로 테두리는 '박스 안 또 박스'로 보인다.
+     좌·우 라인만 없애 캘린더가 패널 안에 자연스럽게 얹히게 한다(아래 라인은 그리드 마감으로 유지). */
+  border-left: 0;
+  border-right: 0;
 }
 
 .split-arrow {
@@ -2607,10 +3774,16 @@ label.field input:focus {
   }
 
   .topbar {
-    align-items: flex-start;
-    flex-direction: column;
+    align-items: center;
+    flex-direction: row;
+    justify-content: space-between;
     gap: 12px;
     padding: 16px 20px;
+  }
+
+  .github-link {
+    margin-left: 0;
+    padding: 0 10px;
   }
 
   .layout {
@@ -2826,11 +3999,12 @@ label.field input:focus {
   from { background-position: 200% 0; }
   to { background-position: -200% 0; }
 }
-/* 결과 행: 스태거 등장(--d) + 판정 뱃지는 120ms 늦게 붙는다 */
-.alt-slots .alt-slot-button {
+/* 결과 행: 스태거 등장(--d) + 판정 뱃지는 120ms 늦게 붙는다.
+   .open을 붙일 때마다 애니메이션이 다시 걸려 '펼칠 때마다' 스태거가 재생된다. */
+.alt-collapse.open .alt-slot-button {
   animation: riseStagger var(--dur-enter) var(--ease-out) var(--d, 0ms) backwards;
 }
-.alt-slots .alt-slot-button em {
+.alt-collapse.open .alt-slot-button em {
   animation: fadeIn var(--dur-base) var(--ease-out) calc(var(--d, 0ms) + 120ms) backwards;
 }
 @keyframes riseStagger {
@@ -2840,6 +4014,36 @@ label.field input:focus {
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@keyframes importanceManualChange {
+  from { opacity: 0.3; transform: translateY(2px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes importanceAutoValue {
+  0% { opacity: 0; transform: translateY(6px); }
+  55% { opacity: 1; transform: translateY(-1px); }
+  100% { opacity: 1; transform: none; }
+}
+
+@keyframes importanceSweep {
+  0% { opacity: 0; transform: translateX(-115%); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(115%); }
+}
+
+/* 참석자 화면 전용 — 스윕(3회, ~1.32s)이 도는 동안 값은 투명, 끝난 뒤 굴러 나타난다. */
+@keyframes importanceAutoCalc {
+  0%, 84% { color: transparent; opacity: 1; transform: translateY(5px); }
+  92% { color: var(--brand-hover); transform: translateY(-1px); }
+  100% { color: var(--brand-hover); transform: none; }
+}
+
+/* '꼭 참석 N명 기준' — 값 등장 직후 살짝 뒤따라 올라온다. */
+@keyframes importanceHintReveal {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: none; }
 }
 
 /* ── §3-1 REQUESTING 전송 시퀀스 + 역할 전환 배너 ── */
@@ -2913,6 +4117,44 @@ label.field input:focus {
 .cal2-block.ev {
   transition: top var(--dur-enter) var(--ease-move), background-color var(--dur-base) var(--ease-out);
 }
+/* 4-1b 요일 간 글라이드 — 회의 블록은 컬럼이 아니라 주 전체 레이어에 살아서, 월→화로 옮겨도
+   같은 노드가 left를 보간하며 가로로 미끄러진다(같은 요일 내 top 이동과 같은 박자). */
+.cal2-hi-layer {
+  /* 절대배치 — 그리드 자동배치를 건드리지 않게(안 그러면 컬럼들이 새 행으로 밀려 clip돼 사라진다).
+     grid-area는 그대로 남아 컬럼 영역(2/-1, 행2)에 정확히 겹친다. */
+  position: absolute;
+  grid-column: 2 / -1;
+  grid-row: 2;
+  left: 0;
+  right: 0;
+  z-index: 2; /* 밴드·고스트 위, 실제 일정 블록(z3) 아래 — 기존 겹침 순서 유지 */
+  pointer-events: none;
+  animation: hiLayerIn var(--dur-base) var(--ease-out);
+}
+@keyframes hiLayerIn { from { opacity: 0; } to { opacity: 1; } }
+
+.cal2-hi-layer .cal2-block.hi,
+.cal2-hi-layer .cal2-moved {
+  left: calc(var(--d, 0) * (100% / 5) + 6px);
+  right: auto;
+  width: calc(100% / 5 - 11px);
+  transition:
+    top var(--dur-enter) var(--ease-move),
+    left var(--dur-enter) var(--ease-move),
+    height var(--dur-enter) var(--ease-move),
+    background-color var(--dur-base) var(--ease-out);
+}
+/* 옮기는 중 블록 레이어 — 다른 일정 블록(z3)보다 위에서 미끄러지도록 한 단 올린다 */
+.cal2-hi-layer.moved { z-index: 4; }
+
+/* 일간 뷰의 요일 넘김 — 하루치 컬럼이 통째로 교체되므로, 넘긴 방향에서 들어온다 */
+.cal2-col.day-swap { animation: daySwapIn var(--dur-enter) var(--ease-out); }
+@keyframes daySwapIn {
+  from { opacity: 0; transform: translateX(calc(var(--slide, 1) * 16px)); }
+  to { opacity: 1; transform: none; }
+}
+.cal2.dayonly .cal2-dayhead { animation: hiLayerIn var(--dur-base) var(--ease-out); }
+
 /* 4-2 ghost 블록 미세 호흡 — 제안된 자리, 아직 확정 아님 */
 .cal2-block.ghost { animation: ghostBreath 2.4s var(--ease-move) infinite; }
 @keyframes ghostBreath {
@@ -2991,7 +4233,7 @@ button:active { transform: translateY(1px) scale(0.985); }
 }
 .pane-id.avatar {          /* 사람 = 원형 */
   border-radius: 9999px;
-  background: var(--brand-weak);
+  background: transparent;
   color: var(--brand-hover);
 }
 .pane-id.plate {           /* 회의실 = 사각 문패(층수) */
@@ -3001,17 +4243,31 @@ button:active { transform: translateY(1px) scale(0.985); }
   color: var(--sub);
   font-size: 11px;
 }
-.pane-type {
+/* 사람·회의실 패널 닫기(X) — 우상단. Toss 'Weak/Dark'(취소·닫기) 처리를 따른다:
+   중립 회색 표면 + grey700 아이콘. 닫기는 파괴적이지 않으니 빨강을 쓰지 않고,
+   파랑은 상호작용 전용이라 여기에 쓰지 않는다(원칙 §4). 호버 시 표면만 살짝 짙어진다. */
+.pane-close {
   flex: 0 0 auto;
   margin-left: auto;
-  border-radius: 9999px;
-  padding: 2px 8px;
+  display: grid;
+  place-items: center;
+  /* 전역 button의 min-height:40px·padding:0 16px가 정사각형을 직사각형으로 늘리므로 여기서 리셋 */
+  width: 28px;
+  height: 28px;
+  min-height: 0;
+  border: 0;
+  border-radius: 8px; /* Toss small 버튼 스케일 */
+  padding: 0;
   background: rgba(2, 32, 71, 0.05);
-  color: var(--sub);
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 16px;
+  color: var(--grey-700, #4e5968);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
 }
+.pane-close:hover {
+  background: rgba(2, 32, 71, 0.09);
+  color: var(--ink, #333d4b);
+}
+.pane-close:active { background: rgba(2, 32, 71, 0.12); }
 
 /* §2 패널 = 버튼 — 하단 액션 스트립 + 패널 전체 클릭 */
 .split-side {
@@ -3064,10 +4320,10 @@ button:active { transform: translateY(1px) scale(0.985); }
 }
 
 /* §3 '캘린더 보기' 선택 상태 — 배경+보더에 이름 색까지 3중 신호 (아바타로 패널과 연결) */
-.avail-item.active .profile-name { color: #c76f00; }                              /* 필참=주황(조정 요청) */
+.avail-item.active .profile-name { color: var(--warn-strong); }                   /* 필참=주황(조정 요청) */
 .avail-item.active.optional-blocked .profile-name { color: var(--brand-hover); }  /* 선택 참석=파랑 */
 .avail-item.active.declined .profile-name { color: var(--danger); }               /* 거절=빨강 */
-.avail-item.active .avatar { background: rgba(254, 152, 0, 0.16); color: #c76f00; }
+.avail-item.active .avatar { background: rgba(254, 152, 0, 0.16); color: var(--warn-strong); }
 .avail-item.active.optional-blocked .avatar { background: var(--brand-weak); color: var(--brand-hover); }
 
 /* §2 하단 고정 존 힌트 (확정 비활성 사유) */
@@ -3077,4 +4333,103 @@ button:active { transform: translateY(1px) scale(0.985); }
   font-size: 13px;
   line-height: 18px;
   text-align: center;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   순차 입력 공개(reveal) + 회의 타입(온라인 카드) + CTA 활성 pulse
+   ═══════════════════════════════════════════════════════════════ */
+/* 순차 공개 — 게이트 완료 시 다음 섹션이 아래에서 riseIn (지연 0ms) */
+.reveal-section { animation: riseIn var(--dur-enter) var(--ease-out); }
+
+/* 온라인 회의 — 회의실 섹션 대체 한 줄 카드 */
+.online-room-card {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  border-radius: 14px;
+  padding: 14px 16px;
+  background: var(--brand-weak);
+  color: var(--brand-hover);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 22px;
+}
+
+/* CTA 활성화 순간 1회 pulse (게이트 충족 → disabled 해제 + brand glow) */
+.flow-cta .primary.cta-ready { animation: ctaPulse var(--dur-slow) var(--ease-out); }
+@keyframes ctaPulse {
+  0% { box-shadow: 0 0 0 0 rgba(49, 130, 246, 0.4); }
+  60% { box-shadow: 0 0 0 8px rgba(49, 130, 246, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(49, 130, 246, 0); }
+}
+
+/* ── 추천 계산 배너 — "계산되어서 시간을 알려준다"는 순간 (바로 진입) ── */
+.rec-computing {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  margin-top: -6px;
+  overflow: hidden;
+  border-radius: 14px;
+  padding: 13px 16px;
+  background: var(--brand-weak);
+  color: var(--brand-hover);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 22px;
+  animation: riseIn var(--dur-enter) var(--ease-out);
+}
+.rec-computing::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(100deg, transparent 18%, rgba(255, 255, 255, 0.55) 40%, transparent 62%);
+  background-size: 220% 100%;
+  animation: shimmer 1.1s linear infinite;
+}
+.rec-computing-dots {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 4px;
+}
+.rec-computing-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: currentColor;
+  animation: recDot 0.9s ease-in-out infinite;
+}
+.rec-computing-dots i:nth-child(2) { animation-delay: 0.15s; }
+.rec-computing-dots i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes recDot {
+  0%, 100% { opacity: 0.3; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-3px); }
+}
+.rec-computing-text {
+  position: relative;
+  z-index: 1;
+  animation: fadeUpText var(--dur-base) var(--ease-out);
+}
+@keyframes fadeUpText {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* 추천 토글 섹션 — 거절 반영 배너가 끝난 뒤 되돌아올 때 툭 튀지 않게 부드럽게 올라온다
+   (첫 계산 뒤 첫 등장에도 같은 결로 나타남). */
+.top-alt-section { animation: riseIn var(--dur-enter) var(--ease-out); }
+
+/* 추천 카드가 계산 끝에 착지할 때 1회 글로우 (riseStagger 위에 얹음) */
+.alt-collapse.open .alt-slot-button.magic-slot-button {
+  animation: riseStagger var(--dur-enter) var(--ease-out) var(--d, 0ms) backwards, recGlow var(--dur-slow) var(--ease-out) 160ms;
+}
+@keyframes recGlow {
+  0% { box-shadow: 0 0 0 0 rgba(49, 130, 246, 0.4); }
+  55% { box-shadow: 0 0 0 8px rgba(49, 130, 246, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(49, 130, 246, 0); }
 }

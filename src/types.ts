@@ -4,8 +4,9 @@
 export type Day = '월' | '화' | '수' | '목' | '금'
 export const DAYS: Day[] = ['월', '화', '수', '목', '금']
 
-// 하루 회의 가능 시작시각 (1시간 단위). 12시는 점심이라 제외.
-export const HOURS: number[] = [9, 10, 11, 13, 14, 15, 16, 17]
+// 하루 회의 가능 시작시각 (1시간 단위). 근무 시간 전체 — 점심시간은 사람마다 달라서
+// 시스템이 특정 시각을 비워두지 않는다. 못 잡는 시간은 각자 캘린더의 일정으로만 표현된다.
+export const HOURS: number[] = [9, 10, 11, 12, 13, 14, 15, 16, 17]
 
 // 한 시간짜리 슬롯 (요일 + 시작시각)
 export interface Slot {
@@ -13,7 +14,7 @@ export interface Slot {
   hour: number
 }
 
-export type EventKind = 'fixed' | 'flex' // fixed=옮길 수 없음, flex=옮길 수 있음
+export type EventKind = 'fixed' | 'flex' | 'context' | 'meeting' // context=캘린더 표시용, 후보 계산에는 영향 없음
 
 export interface CalEvent {
   id: string
@@ -82,11 +83,34 @@ export interface Proposal {
   frictionLabel: string // "낮음" | "중간"
 }
 
-// 회의 생성 입력 (상태 ①)
+export type ResponseStatus = 'confirmed' | 'pending' | 'excluded'
+
+export interface AttendeeResponse {
+  attendeeId: string
+  status: ResponseStatus
+  via?: 'request' | 'share'
+  note?: string
+}
+
+export interface ConfirmedMeeting {
+  id: string
+  title: string
+  slot: Slot
+  location: string
+  responses: AttendeeResponse[]
+  dismissed: boolean
+  createdAt: number
+}
+
+// 회의 방식 — 자원 계산에 개입한다(온라인이면 회의실이 세 자원에서 빠짐). null=아직 미선택
+export type MeetingMode = 'online' | 'inperson' | 'either'
+
+// 회의 생성 입력 (상태 ①) — 순차 입력 공개를 위해 미선택값은 null
 export interface MeetingDraft {
   title: string
   agenda: string
-  durationHours: number
+  durationHours: number | null
+  mode: MeetingMode | null
   location: string
 }
 
