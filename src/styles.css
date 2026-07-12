@@ -99,6 +99,7 @@ b {
 
 .app-shell {
   height: 100vh;
+  height: 100dvh;   /* 모바일 툴바·임베드에서 실제 보이는 높이 기준 — 하단 CTA 잘림/스크롤 이슈 방지 */
   display: flex;
   flex-direction: column;
   background: var(--bg);
@@ -258,6 +259,9 @@ b {
 .sidebar {
   width: 420px;
   flex-shrink: 0;
+  min-height: 0;            /* 창이 짧아도 내부 스크롤이 걸리도록 flex 높이를 바운드 */
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   background: var(--canvas);
   border-right: 1px solid var(--line);
@@ -639,7 +643,7 @@ h2 {
 
 .flow-screen {
   position: relative;
-  height: 100%;
+  flex: 1 1 auto;   /* 퍼센트 높이 대신 flex로 바운드 — 짧은 창에서도 flow-content가 스크롤됨 */
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -3882,7 +3886,7 @@ label.field input:focus {
    ═══════════════════════════════════════════════════════════════ */
 
 /* ── §3 화면 전환: 사이드바 X축 슬라이드 (방향 인식) ── */
-.screen-enter { height: 100%; }
+.screen-enter { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
 .screen-enter.fwd { animation: screenInFwd var(--dur-enter) var(--ease-out) both; }
 .screen-enter.back { animation: screenInBack var(--dur-enter) var(--ease-out) both; }
 @keyframes screenInFwd {
