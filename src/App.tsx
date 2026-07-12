@@ -10,6 +10,7 @@ import {
   bookingAt,
   roomBookingId,
   resolveSlot,
+  resolveBlockerFor,
   teamAvailability,
   availableRooms,
   recommendRoom,
@@ -1023,7 +1024,11 @@ function buildCandidatesPreview(state: State, slot: Slot, myEvents: CalEvent[]):
   if (who) {
     const theirReal = state.events.filter((e) => e.ownerId === who.id)
     const conflict = theirReal.find((e) => e.day === slot.day && slot.hour >= e.startHour && slot.hour < e.endHour)
-    const currentProposal = resolveSlot(state.attendees, schedulingEvents, slot)
+    // 지목한 '이 사람'만 조정하는 제안을 우선 만든다 — 필참 2명 이상 차단(다자/비추천) 슬롯에서도
+    // 한 명씩 조율 가능. 선택 참석자 제외는 whole-slot resolveSlot으로 폴백.
+    const wholeSlotProposal = resolveSlot(state.attendees, schedulingEvents, slot)
+    const currentProposal = resolveBlockerFor(who, slot, schedulingEvents)
+      ?? (wholeSlotProposal?.whoId === who.id ? wholeSlotProposal : null)
     const declined = currentProposal?.whoId === who.id && isDeclined(state, currentProposal)
     const fieldwork = who.softPrefs.some((pref) => pref.type === 'fieldwork' && pref.days.includes(slot.day) && slot.hour >= 9 && slot.hour < 12)
     const postLunch = who.softPrefs.some((pref) => pref.type === 'avoidPostLunch') && slot.hour === 13

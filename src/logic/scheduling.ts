@@ -308,6 +308,31 @@ export function resolveSlot(invited: Attendee[], events: CalEvent[], slot: Slot)
   return null
 }
 
+/**
+ * '이 사람 한 명'만 조정하는 제안 (필참 대상). resolveSlot과 달리 '정확히 1명' 게이트가 없어,
+ * 필참 2명 이상 차단(다자/비추천) 슬롯에서도 사용자가 지목한 차단자를 하나씩 조율할 수 있게 한다.
+ * (추천은 여전히 최소 조정 슬롯으로 안내하되, 원하면 어떤 시간이든 사람별로 조정 요청을 보낼 자유를 준다)
+ */
+export function resolveBlockerFor(who: Attendee, slot: Slot, events: CalEvent[]): Proposal | null {
+  if (who.role !== 'required') return null // 선택 참석자는 whole-slot dropOptional 경로가 처리
+  if (isFree(who, slot, events)) return null
+  const ev = eventAt(who, slot, events)
+  if (ev && (ev.kind === 'flex' || ev.kind === 'fixed')) {
+    const moveTo = findMoveTarget(who, slot, events)
+    if (!moveTo) return null
+    return mkProposal('moveFlex', slot, who.id, {
+      detail: `${who.name} 님의 '${ev.title}'을 ${hourText(moveTo)}로 이동`,
+      moveTo, movedEventId: ev.id,
+    })
+  }
+  if (!ev && violatesSoft(who, slot)) {
+    return mkProposal('concedeSoft', slot, who.id, {
+      detail: `${who.name} 님에게 ${hourText(slot)} 참석 가능 여부 확인`,
+    })
+  }
+  return null
+}
+
 // ── 비용 사다리 (추천 우선도) ─────────────────────────────────
 // 설계 의도(로직 계획 §0): "필참 N명이면 매직 on/off" 같은 분기 규칙을 만들지 않는다.
 // 모든 슬롯에 '조정 비용'을 매기고, 추천은 항상 최소 비용 티어를 보여준다.
